@@ -12,13 +12,12 @@ function processApprovedRequests() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   ss.toast("Processing approved requests...", "Please wait");
 
-  var lateCount = processApprovedLateCheckIns(ss);
   var pinkCount = processApprovedPinkSheets(ss);
   var yellowCount = processApprovedYellowSheets(ss);
 
   SpreadsheetApp.flush();
 
-  var total = lateCount + pinkCount + yellowCount;
+  var total = pinkCount + yellowCount;
   if (total === 0) {
     ss.toast("No approved requests to process.", "Queue Processor");
   } else {
@@ -26,8 +25,6 @@ function processApprovedRequests() {
       "Processed " +
         total +
         " request(s): " +
-        lateCount +
-        " late, " +
         pinkCount +
         " pink, " +
         yellowCount +
@@ -36,9 +33,7 @@ function processApprovedRequests() {
     );
   }
   console.log(
-    "QueueProcessor: late=" +
-      lateCount +
-      " pink=" +
+    "QueueProcessor: pink=" +
       pinkCount +
       " yellow=" +
       yellowCount,
@@ -58,12 +53,12 @@ function processApprovedRequests() {
  * @returns {number} 0-based column index, or -1 if not found.
  */
 function matchDateColumn(headers, targetDate) {
-  var targetMd = Utilities.formatDate(targetDate, "America/Chicago", "M/d");
+  var targetMd = Utilities.formatDate(targetDate, getAppTimezone(), "M/d");
 
   for (var c = 1; c < headers.length; c++) {
     var parsed = parseDateHeader(headers[c]);
     if (!parsed) continue;
-    var headerMd = Utilities.formatDate(parsed, "America/Chicago", "M/d");
+    var headerMd = Utilities.formatDate(parsed, getAppTimezone(), "M/d");
     if (headerMd === targetMd) return c;
   }
   return -1;
@@ -105,8 +100,10 @@ function processApprovedLateCheckIns(ss) {
 
   // Collect approved rows with their original row indices (1-based, offset by header)
   var approved = [];
+  var approvedStatus = getStatusValue('APPROVED');
+  var completeStatus = getStatusValue('COMPLETE');
   for (var i = 0; i < rows.length; i++) {
-    if (String(rows[i][colStatus]).trim() === "Approved") {
+    if (String(rows[i][colStatus]).trim() === approvedStatus) {
       approved.push({
         rowIndex: i + 2, // 1-based sheet row (header=1, first data=2)
         name: String(rows[i][colName]).trim(),
@@ -125,7 +122,7 @@ function processApprovedLateCheckIns(ss) {
   var processed = applyAttendanceUpdates(
     ss,
     bySection,
-    "Tardy",
+    getAttendanceValue('TARDY'),
     function (item) {
       return item.arrival instanceof Date
         ? item.arrival
@@ -138,7 +135,7 @@ function processApprovedLateCheckIns(ss) {
   for (var j = 0; j < approved.length; j++) {
     lateSheet
       .getRange(approved[j].rowIndex, colStatus + 1)
-      .setValue("Completed");
+      .setValue(completeStatus);
   }
 
   return processed;
@@ -156,60 +153,7 @@ function processApprovedLateCheckIns(ss) {
  * @returns {number} Number of rows processed.
  */
 function processApprovedPinkSheets(ss) {
-  var tabData = getTableDataWithHeaders("Pink Sheets");
-  var headers = tabData.headers;
-  var rows = tabData.data;
-
-  var colName = headers.indexOf("Full Name");
-  var colSection = headers.indexOf("Section");
-  var colDate = headers.indexOf("Date");
-  var colStatus = headers.indexOf("Status");
-
-  if (
-    colName === -1 ||
-    colSection === -1 ||
-    colDate === -1 ||
-    colStatus === -1
-  ) {
-    console.error(
-      "PinkSheets: missing required columns. Found: " + JSON.stringify(headers),
-    );
-    return 0;
-  }
-
-  var approved = [];
-  for (var i = 0; i < rows.length; i++) {
-    if (String(rows[i][colStatus]).trim() === "Approved") {
-      approved.push({
-        rowIndex: i + 2,
-        name: String(rows[i][colName]).trim(),
-        section: String(rows[i][colSection]).trim(),
-        date: rows[i][colDate],
-      });
-    }
-  }
-
-  if (approved.length === 0) return 0;
-
-  var bySection = groupByKey(approved, "section");
-
-  var processed = applyAttendanceUpdates(
-    ss,
-    bySection,
-    "Excused",
-    function (item) {
-      return item.date instanceof Date ? item.date : new Date(item.date);
-    },
-  );
-
-  var pinkSheet = getSheet("Pink Sheets");
-  for (var j = 0; j < approved.length; j++) {
-    pinkSheet
-      .getRange(approved[j].rowIndex, colStatus + 1)
-      .setValue("Completed");
-  }
-
-  return processed;
+  return processPinkSheetActions(ss);
 }
 
 // ---------------------------------------------------------------------------
@@ -250,8 +194,10 @@ function processApprovedYellowSheets(ss) {
   }
 
   var approved = [];
+  var approvedStatus = getStatusValue('APPROVED');
+  var completeStatus = getStatusValue('COMPLETE');
   for (var i = 0; i < rows.length; i++) {
-    if (String(rows[i][colStatus]).trim() === "Approved") {
+    if (String(rows[i][colStatus]).trim() === approvedStatus) {
       approved.push({
         rowIndex: i + 2,
         name: String(rows[i][colName]).trim(),
@@ -329,7 +275,7 @@ function processApprovedYellowSheets(ss) {
   for (var j = 0; j < approved.length; j++) {
     yellowSheet
       .getRange(approved[j].rowIndex, colStatus + 1)
-      .setValue("Completed");
+      .setValue(completeStatus);
   }
 
   return processed;
@@ -421,7 +367,7 @@ function applyAttendanceUpdates(ss, bySection, attendanceValue, getDate) {
           "QueueProcessor: no matching date column for " +
             item.name +
             " on " +
-            Utilities.formatDate(targetDate, "America/Chicago", "M/d"),
+            Utilities.formatDate(targetDate, getAppTimezone(), "M/d"),
         );
         continue;
       }
@@ -454,7 +400,17 @@ function applyAttendanceUpdates(ss, bySection, attendanceValue, getDate) {
 function formatTimeValue(timeValue) {
   if (!timeValue) return "";
   if (timeValue instanceof Date) {
-    return Utilities.formatDate(timeValue, "America/Chicago", "h:mm a");
+    return Utilities.formatDate(timeValue, getAppTimezone(), "h:mm a");
   }
   return String(timeValue).trim();
+}
+
+/**
+ * Runtime override for Yellow Sheet processing.
+ *
+ * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ss
+ * @returns {number}
+ */
+function processApprovedYellowSheets(ss) {
+  return processYellowSheetActions(ss);
 }

@@ -8,9 +8,6 @@ var FORM_CONFIG = {
   // Choices for the "Ensemble" question on Pink and Yellow forms.
   ENSEMBLE_CHOICES: ['KSUMB'],
 
-  // Choices for "Reason for late arrival" on the Late Check-In form.
-  LATE_REASONS: ['Class', 'Parking / traffic', 'Work', 'Personal emergency', 'Other'],
-
   // Choices for the "Conflict Days" checkbox question on the Yellow Sheet form.
   CONFLICT_DAYS: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
 };
@@ -111,6 +108,7 @@ function logFormUrls() {
  * @returns {GoogleAppsScript.Forms.Form}
  */
 function _buildPinkForm(allNames) {
+  var sectionTabs = getConfiguredSectionTabs();
   var form = FormApp.create('KSUMB Pink Sheet Request');
   form.setDescription(
     'Use this form to request an excused absence from a KSUMB rehearsal or event. ' +
@@ -129,7 +127,7 @@ function _buildPinkForm(allNames) {
 
   var sectionItem = form.addListItem();
   sectionItem.setTitle('Your Section').setRequired(true);
-  sectionItem.setChoiceValues(SECTION_TABS);
+  sectionItem.setChoiceValues(sectionTabs);
 
   var dateItem = form.addDateItem();
   dateItem.setTitle('Date of Absence').setRequired(true);
@@ -158,6 +156,8 @@ function _buildPinkForm(allNames) {
  * @returns {GoogleAppsScript.Forms.Form}
  */
 function _buildLateForm(namesBySection) {
+  var sectionTabs = getConfiguredSectionTabs();
+  var lateReasons = getConfiguredLateReasons();
   var form = FormApp.create('KSUMB Late Check-In');
   form.setDescription('Arrived late to rehearsal? Submit this form immediately upon arrival.');
   form.setCollectEmail(false);
@@ -169,8 +169,8 @@ function _buildLateForm(namesBySection) {
 
   // Create one page per section, collect page references for routing
   var sectionPages = {};
-  for (var t = 0; t < SECTION_TABS.length; t++) {
-    var section = SECTION_TABS[t];
+  for (var t = 0; t < sectionTabs.length; t++) {
+    var section = sectionTabs[t];
 
     var page = form.addPageBreakItem();
     page.setTitle(section + ' \u2014 Select Your Name'); // em dash matches inspectFormQuestions output
@@ -182,7 +182,7 @@ function _buildLateForm(namesBySection) {
 
     var reasonItem = form.addMultipleChoiceItem();
     reasonItem.setTitle('Reason for late arrival').setRequired(true);
-    reasonItem.setChoiceValues(FORM_CONFIG.LATE_REASONS);
+    reasonItem.setChoiceValues(lateReasons);
 
     var otherItem = form.addTextItem();
     otherItem.setTitle('If \u201cOther\u201d, please explain:'); // curly quotes
@@ -192,8 +192,8 @@ function _buildLateForm(namesBySection) {
 
   // Wire routing: each section choice navigates to that section's page
   var choices = [];
-  for (var s = 0; s < SECTION_TABS.length; s++) {
-    choices.push(sectionQuestion.createChoice(SECTION_TABS[s], sectionPages[SECTION_TABS[s]]));
+  for (var s = 0; s < sectionTabs.length; s++) {
+    choices.push(sectionQuestion.createChoice(sectionTabs[s], sectionPages[sectionTabs[s]]));
   }
   sectionQuestion.setChoices(choices);
 
@@ -216,6 +216,7 @@ function _buildLateForm(namesBySection) {
  * @returns {GoogleAppsScript.Forms.Form}
  */
 function _buildYellowForm(allNames) {
+  var sectionTabs = getConfiguredSectionTabs();
   var form = FormApp.create('KSUMB Yellow Sheet (Class Conflict)');
   form.setDescription(
     'Use this form to report a recurring class conflict with KSUMB rehearsal. ' +
@@ -223,6 +224,7 @@ function _buildYellowForm(allNames) {
   );
   form.setCollectEmail(false);
   form.setLimitOneResponsePerUser(false);
+  form.setAllowResponseEdits(true);
 
   var nameItem = form.addListItem();
   nameItem.setTitle('Your Full Name').setRequired(true);
@@ -234,7 +236,7 @@ function _buildYellowForm(allNames) {
 
   var sectionItem = form.addListItem();
   sectionItem.setTitle('Your Section').setRequired(true);
-  sectionItem.setChoiceValues(SECTION_TABS);
+  sectionItem.setChoiceValues(sectionTabs);
 
   var daysItem = form.addCheckboxItem();
   daysItem.setTitle('Conflict Days').setRequired(true);

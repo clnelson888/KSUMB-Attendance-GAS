@@ -6,7 +6,7 @@
  */
 function addRehearsalDate() {
   var config = getConfig();
-  var defaultTime = config["REHEARSAL_START_TIME"] || "15:30";
+  var defaultTime = config[CONFIG_KEYS.REHEARSAL_START_TIME] || DEFAULT_CONFIG_VALUES[CONFIG_KEYS.REHEARSAL_START_TIME];
 
   var template = HtmlService.createTemplateFromFile("DateAddDialog");
   template.defaultTime = defaultTime;
@@ -78,7 +78,7 @@ function insertRehearsalDate(dateString, timeString) {
   // Format header string: "M/d h:mm a" → e.g. "3/30 3:30 PM"
   var headerString = Utilities.formatDate(
     rehearsalDate,
-    "America/Chicago",
+    getAppTimezone(),
     "M/d h:mm a",
   );
 
@@ -86,8 +86,9 @@ function insertRehearsalDate(dateString, timeString) {
   var tabsProcessed = 0;
   var tabsSkipped = 0;
 
-  for (var t = 0; t < SECTION_TABS.length; t++) {
-    var tabName = SECTION_TABS[t];
+  var sectionTabs = getConfiguredSectionTabs();
+  for (var t = 0; t < sectionTabs.length; t++) {
+    var tabName = sectionTabs[t];
     var sheet = ss.getSheetByName(tabName);
 
     if (!sheet) {
@@ -172,21 +173,12 @@ function insertRehearsalDate(dateString, timeString) {
       );
     }
 
-    // Fill default attendance value if one is configured
-    var defaultAttVal =
-      PropertiesService.getScriptProperties().getProperty("DEFAULT_ATTENDANCE_VALUE") || "";
-    if (defaultAttVal && lastRow > 1) {
-      var defaultData = [];
-      for (var r = 0; r < lastRow - 1; r++) {
-        defaultData.push([defaultAttVal]);
-      }
-      sheet.getRange(2, newCol, lastRow - 1, 1).setValues(defaultData);
-    }
-
     tabsProcessed++;
   }
 
   SpreadsheetApp.flush();
+  processPinkSheetsForDate(rehearsalDate);
+  processPendingLateCheckInsForDate(rehearsalDate);
 
   var message = "Added " + headerString + " to " + tabsProcessed + " tab(s).";
   if (tabsSkipped > 0) {
@@ -206,8 +198,9 @@ function openDeleteDateDialog() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var dateOptions = [];
 
-  for (var t = 0; t < SECTION_TABS.length; t++) {
-    var sheet = ss.getSheetByName(SECTION_TABS[t]);
+  var sectionTabs = getConfiguredSectionTabs();
+  for (var t = 0; t < sectionTabs.length; t++) {
+    var sheet = ss.getSheetByName(sectionTabs[t]);
     if (!sheet) continue;
 
     var lastCol = sheet.getLastColumn();
@@ -249,9 +242,11 @@ function deleteRehearsalDate(headerString) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var tabsProcessed = 0;
   var tabsSkipped = 0;
+  var deletedDate = parseDateHeader(headerString);
 
-  for (var t = 0; t < SECTION_TABS.length; t++) {
-    var tabName = SECTION_TABS[t];
+  var sectionTabs = getConfiguredSectionTabs();
+  for (var t = 0; t < sectionTabs.length; t++) {
+    var tabName = sectionTabs[t];
     var sheet = ss.getSheetByName(tabName);
     if (!sheet) continue;
 
@@ -280,6 +275,9 @@ function deleteRehearsalDate(headerString) {
   }
 
   SpreadsheetApp.flush();
+  if (deletedDate) {
+    resetQueuesForDeletedDate(deletedDate);
+  }
 
   var message = 'Deleted "' + headerString + '" from ' + tabsProcessed + " tab(s).";
   if (tabsSkipped > 0) {
@@ -287,6 +285,73 @@ function deleteRehearsalDate(headerString) {
   }
   ss.toast(message, "Delete Complete");
   console.log("DateDelete: " + message);
+}
+
+/**
+ * Resets Pink Sheet and Late Check-In rows that reference a deleted date so
+ * they can be reprocessed if the date is added again later.
+ *
+ * @param {Date} deletedDate
+ */
+function resetQueuesForDeletedDate(deletedDate) {
+  resetPinkSheetQueueForDeletedDate(deletedDate);
+  resetLateQueueForDeletedDate(deletedDate);
+}
+
+/**
+ * Resets matching Pink Sheet rows to Pending.
+ *
+ * @param {Date} deletedDate
+ */
+function resetPinkSheetQueueForDeletedDate(deletedDate) {
+  var pinkSheet = getSheet('Pink Sheets');
+  var allData = pinkSheet.getDataRange().getValues();
+  if (allData.length < 2) return;
+
+  var headers = allData[0];
+  var headerMap = getPinkSheetHeaderMap(headers);
+  var pendingStatus = getStatusValue('PENDING');
+
+  for (var i = 1; i < allData.length; i++) {
+    var sheetDate = allData[i][headerMap.date] instanceof Date ? allData[i][headerMap.date] : new Date(allData[i][headerMap.date]);
+    if (!shouldResetQueueRowForDeletedDate(sheetDate, deletedDate)) continue;
+
+    pinkSheet.getRange(i + 1, headerMap.status + 1).setValue(pendingStatus);
+    if (headerMap.processedAt !== -1) {
+      pinkSheet.getRange(i + 1, headerMap.processedAt + 1).setValue('');
+    }
+    if (headerMap.error !== -1) {
+      pinkSheet.getRange(i + 1, headerMap.error + 1).setValue('');
+    }
+  }
+}
+
+/**
+ * Resets matching Late Check-In rows to Pending.
+ *
+ * @param {Date} deletedDate
+ */
+function resetLateQueueForDeletedDate(deletedDate) {
+  var lateSheet = getSheet('Late Check-Ins');
+  var allData = lateSheet.getDataRange().getValues();
+  if (allData.length < 2) return;
+
+  var headers = allData[0];
+  var headerMap = getLateCheckInHeaderMap(headers);
+  var pendingStatus = getStatusValue('PENDING');
+
+  for (var i = 1; i < allData.length; i++) {
+    var arrival = allData[i][headerMap.arrivalTime] instanceof Date ? allData[i][headerMap.arrivalTime] : new Date(allData[i][headerMap.arrivalTime]);
+    if (!shouldResetQueueRowForDeletedDate(arrival, deletedDate)) continue;
+
+    lateSheet.getRange(i + 1, headerMap.status + 1).setValue(pendingStatus);
+    if (headerMap.processedAt !== -1) {
+      lateSheet.getRange(i + 1, headerMap.processedAt + 1).setValue('');
+    }
+    if (headerMap.error !== -1) {
+      lateSheet.getRange(i + 1, headerMap.error + 1).setValue('');
+    }
+  }
 }
 
 // ─── Default Attendance Value ─────────────────────────────────────────────────
