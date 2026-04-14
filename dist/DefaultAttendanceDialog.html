@@ -1,0 +1,111 @@
+<!doctype html>
+<html>
+  <head>
+    <base target="_top" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 12px;
+      }
+      label {
+        display: block;
+        margin-top: 10px;
+        font-weight: bold;
+        font-size: 13px;
+      }
+      input[type='text'] {
+        width: 100%;
+        padding: 6px;
+        margin-top: 4px;
+        box-sizing: border-box;
+      }
+      .hint {
+        font-size: 11px;
+        color: #666;
+        margin-top: 4px;
+      }
+      .actions {
+        margin-top: 16px;
+        text-align: right;
+      }
+      button {
+        padding: 8px 16px;
+        margin-left: 8px;
+        cursor: pointer;
+      }
+      #save-btn {
+        background: #4285f4;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+      }
+      #save-btn:disabled {
+        background: #ccc;
+      }
+      #cancel-btn {
+        background: #f1f1f1;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      #status {
+        font-size: 12px;
+        margin-top: 8px;
+        display: none;
+      }
+      #status.success {
+        color: #188038;
+      }
+      #status.error {
+        color: #d93025;
+      }
+    </style>
+  </head>
+  <body>
+    <label for="default-input">Default Attendance Value</label>
+    <input type="text" id="default-input" placeholder="Leave blank for no default" />
+    <p class="hint">
+      This value is filled into every member row when a new date column is added.
+      Leave blank to insert empty cells.
+    </p>
+
+    <div id="status"></div>
+
+    <div class="actions">
+      <button id="cancel-btn" onclick="google.script.host.close()">Cancel</button>
+      <button id="save-btn" onclick="saveDefault()">Save</button>
+    </div>
+
+    <script>
+      // Pre-fill with the current saved default
+      document.getElementById('default-input').value = <?!= JSON.stringify(currentDefault) ?>;
+
+      function saveDefault() {
+        var value = document.getElementById('default-input').value.trim();
+        var statusEl = document.getElementById('status');
+
+        statusEl.style.display = 'none';
+        document.getElementById('save-btn').disabled = true;
+        document.getElementById('save-btn').textContent = 'Saving...';
+
+        google.script.run
+          .withSuccessHandler(function () {
+            statusEl.className = 'success';
+            statusEl.textContent = value
+              ? 'Default set to "' + value + '".'
+              : 'Default cleared (cells will be blank).';
+            statusEl.style.display = 'block';
+            document.getElementById('save-btn').disabled = false;
+            document.getElementById('save-btn').textContent = 'Save';
+          })
+          .withFailureHandler(function (err) {
+            statusEl.className = 'error';
+            statusEl.textContent = err.message || 'An error occurred.';
+            statusEl.style.display = 'block';
+            document.getElementById('save-btn').disabled = false;
+            document.getElementById('save-btn').textContent = 'Save';
+          })
+          .setDefaultAttendanceValue(value);
+      }
+    </script>
+  </body>
+</html>

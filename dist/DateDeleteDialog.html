@@ -1,0 +1,114 @@
+<!doctype html>
+<html>
+  <head>
+    <base target="_top" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 12px;
+      }
+      label {
+        display: block;
+        margin-top: 10px;
+        font-weight: bold;
+        font-size: 13px;
+      }
+      select {
+        width: 100%;
+        padding: 6px;
+        margin-top: 4px;
+        box-sizing: border-box;
+      }
+      .actions {
+        margin-top: 16px;
+        text-align: right;
+      }
+      button {
+        padding: 8px 16px;
+        margin-left: 8px;
+        cursor: pointer;
+      }
+      #delete-btn {
+        background: #d93025;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+      }
+      #delete-btn:disabled {
+        background: #ccc;
+      }
+      #cancel-btn {
+        background: #f1f1f1;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      #error {
+        color: #d93025;
+        font-size: 12px;
+        margin-top: 8px;
+        display: none;
+      }
+      #no-dates {
+        color: #888;
+        font-size: 13px;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <? var options = dateOptions; ?>
+    <? if (options.length === 0) { ?>
+      <p id="no-dates">No rehearsal date columns found.</p>
+      <div class="actions">
+        <button id="cancel-btn" onclick="google.script.host.close()">Close</button>
+      </div>
+    <? } else { ?>
+      <label for="date-select">Select Date to Delete</label>
+      <select id="date-select">
+        <? for (var i = 0; i < options.length; i++) { ?>
+          <option value="<?= options[i] ?>"><?= options[i] ?></option>
+        <? } ?>
+      </select>
+
+      <div id="error"></div>
+
+      <div class="actions">
+        <button id="cancel-btn" onclick="google.script.host.close()">Cancel</button>
+        <button id="delete-btn" onclick="submitDelete()">Delete Date</button>
+      </div>
+    <? } ?>
+
+    <script>
+      function submitDelete() {
+        var selected = document.getElementById('date-select').value;
+        var errorEl = document.getElementById('error');
+
+        if (!selected) {
+          errorEl.textContent = 'Please select a date.';
+          errorEl.style.display = 'block';
+          return;
+        }
+
+        if (!confirm('Delete "' + selected + '" from all section tabs? This cannot be undone.')) {
+          return;
+        }
+
+        errorEl.style.display = 'none';
+        document.getElementById('delete-btn').disabled = true;
+        document.getElementById('delete-btn').textContent = 'Deleting...';
+
+        google.script.run
+          .withSuccessHandler(function () {
+            google.script.host.close();
+          })
+          .withFailureHandler(function (err) {
+            errorEl.textContent = err.message || 'An error occurred.';
+            errorEl.style.display = 'block';
+            document.getElementById('delete-btn').disabled = false;
+            document.getElementById('delete-btn').textContent = 'Delete Date';
+          })
+          .deleteRehearsalDate(selected);
+      }
+    </script>
+  </body>
+</html>
