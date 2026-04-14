@@ -28,7 +28,13 @@ function clearAttendanceHistory() {
     lock.releaseLock();
   }
 
-  logSystemEvent('Maintenance', 'clearAttendanceHistory', 'INFO', '', 'Cleared attendance history from ' + cleared + ' section tab(s).');
+  logSystemEvent(
+    'Maintenance',
+    'clearAttendanceHistory',
+    'INFO',
+    '',
+    'Cleared attendance history from ' + cleared + ' section tab(s).'
+  );
   SpreadsheetApp.getUi().alert(
     'Clear Attendance History',
     'Cleared attendance history from ' + cleared + ' section tab(s).',
@@ -50,7 +56,11 @@ function newYearSetup() {
 
   clearYellowSheetNotesFromSections();
   logSystemEvent('Maintenance', 'newYearSetup', 'INFO', '', 'Completed New Year Setup.');
-  SpreadsheetApp.getUi().alert('New Year Setup', 'Attendance history, queue logs, and Yellow Sheet notes were cleared.', SpreadsheetApp.getUi().ButtonSet.OK);
+  SpreadsheetApp.getUi().alert(
+    'New Year Setup',
+    'Attendance history, queue logs, and Yellow Sheet notes were cleared.',
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
 }
 
 /**
@@ -64,7 +74,10 @@ function clearManagedSheetData(sheetName) {
   var lastCol = sheet.getLastColumn();
   if (lastRow <= 1 || lastCol === 0) return;
 
-  sheet.getRange(2, 1, lastRow - 1, lastCol).clearContent().clearNote();
+  sheet
+    .getRange(2, 1, lastRow - 1, lastCol)
+    .clearContent()
+    .clearNote();
 }
 
 /**

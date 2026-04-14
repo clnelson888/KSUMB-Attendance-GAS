@@ -10,7 +10,7 @@
  */
 function processApprovedRequests() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  ss.toast("Processing approved requests...", "Please wait");
+  ss.toast('Processing approved requests...', 'Please wait');
 
   var pinkCount = processApprovedPinkSheets(ss);
   var yellowCount = processApprovedYellowSheets(ss);
@@ -19,25 +19,14 @@ function processApprovedRequests() {
 
   var total = pinkCount + yellowCount;
   if (total === 0) {
-    ss.toast("No approved requests to process.", "Queue Processor");
+    ss.toast('No approved requests to process.', 'Queue Processor');
   } else {
     ss.toast(
-      "Processed " +
-        total +
-        " request(s): " +
-        pinkCount +
-        " pink, " +
-        yellowCount +
-        " yellow.",
-      "Queue Processor",
+      'Processed ' + total + ' request(s): ' + pinkCount + ' pink, ' + yellowCount + ' yellow.',
+      'Queue Processor'
     );
   }
-  console.log(
-    "QueueProcessor: pink=" +
-      pinkCount +
-      " yellow=" +
-      yellowCount,
-  );
+  console.log('QueueProcessor: pink=' + pinkCount + ' yellow=' + yellowCount);
 }
 
 // ---------------------------------------------------------------------------
@@ -53,12 +42,12 @@ function processApprovedRequests() {
  * @returns {number} 0-based column index, or -1 if not found.
  */
 function matchDateColumn(headers, targetDate) {
-  var targetMd = Utilities.formatDate(targetDate, getAppTimezone(), "M/d");
+  var targetMd = Utilities.formatDate(targetDate, getAppTimezone(), 'M/d');
 
   for (var c = 1; c < headers.length; c++) {
     var parsed = parseDateHeader(headers[c]);
     if (!parsed) continue;
-    var headerMd = Utilities.formatDate(parsed, getAppTimezone(), "M/d");
+    var headerMd = Utilities.formatDate(parsed, getAppTimezone(), 'M/d');
     if (headerMd === targetMd) return c;
   }
   return -1;
@@ -76,25 +65,17 @@ function matchDateColumn(headers, targetDate) {
  * @returns {number} Number of rows processed.
  */
 function processApprovedLateCheckIns(ss) {
-  var tabData = getTableDataWithHeaders("Late Check-Ins");
+  var tabData = getTableDataWithHeaders('Late Check-Ins');
   var headers = tabData.headers;
   var rows = tabData.data;
 
-  var colName = headers.indexOf("Full Name");
-  var colSection = headers.indexOf("Section");
-  var colArrival = headers.indexOf("Arrival Time");
-  var colStatus = headers.indexOf("Status");
+  var colName = headers.indexOf('Full Name');
+  var colSection = headers.indexOf('Section');
+  var colArrival = headers.indexOf('Arrival Time');
+  var colStatus = headers.indexOf('Status');
 
-  if (
-    colName === -1 ||
-    colSection === -1 ||
-    colArrival === -1 ||
-    colStatus === -1
-  ) {
-    console.error(
-      "LateCheckIns: missing required columns. Found: " +
-        JSON.stringify(headers),
-    );
+  if (colName === -1 || colSection === -1 || colArrival === -1 || colStatus === -1) {
+    console.error('LateCheckIns: missing required columns. Found: ' + JSON.stringify(headers));
     return 0;
   }
 
@@ -116,26 +97,17 @@ function processApprovedLateCheckIns(ss) {
   if (approved.length === 0) return 0;
 
   // Group by section
-  var bySection = groupByKey(approved, "section");
+  var bySection = groupByKey(approved, 'section');
 
   // Process each section
-  var processed = applyAttendanceUpdates(
-    ss,
-    bySection,
-    getAttendanceValue('TARDY'),
-    function (item) {
-      return item.arrival instanceof Date
-        ? item.arrival
-        : new Date(item.arrival);
-    },
-  );
+  var processed = applyAttendanceUpdates(ss, bySection, getAttendanceValue('TARDY'), function (item) {
+    return item.arrival instanceof Date ? item.arrival : new Date(item.arrival);
+  });
 
   // Mark processed rows as Completed
-  var lateSheet = getSheet("Late Check-Ins");
+  var lateSheet = getSheet('Late Check-Ins');
   for (var j = 0; j < approved.length; j++) {
-    lateSheet
-      .getRange(approved[j].rowIndex, colStatus + 1)
-      .setValue(completeStatus);
+    lateSheet.getRange(approved[j].rowIndex, colStatus + 1).setValue(completeStatus);
   }
 
   return processed;
@@ -169,27 +141,19 @@ function processApprovedPinkSheets(ss) {
  * @returns {number} Number of rows processed.
  */
 function processApprovedYellowSheets(ss) {
-  var tabData = getTableDataWithHeaders("Yellow Sheets");
+  var tabData = getTableDataWithHeaders('Yellow Sheets');
   var headers = tabData.headers;
   var rows = tabData.data;
 
-  var colName = headers.indexOf("Full Name");
-  var colSection = headers.indexOf("Section");
-  var colDays = headers.indexOf("Conflict Days");
-  var colStart = headers.indexOf("Start Time");
-  var colEnd = headers.indexOf("End Time");
-  var colStatus = headers.indexOf("Status");
+  var colName = headers.indexOf('Full Name');
+  var colSection = headers.indexOf('Section');
+  var colDays = headers.indexOf('Conflict Days');
+  var colStart = headers.indexOf('Start Time');
+  var colEnd = headers.indexOf('End Time');
+  var colStatus = headers.indexOf('Status');
 
-  if (
-    colName === -1 ||
-    colSection === -1 ||
-    colDays === -1 ||
-    colStatus === -1
-  ) {
-    console.error(
-      "YellowSheets: missing required columns. Found: " +
-        JSON.stringify(headers),
-    );
+  if (colName === -1 || colSection === -1 || colDays === -1 || colStatus === -1) {
+    console.error('YellowSheets: missing required columns. Found: ' + JSON.stringify(headers));
     return 0;
   }
 
@@ -203,15 +167,15 @@ function processApprovedYellowSheets(ss) {
         name: String(rows[i][colName]).trim(),
         section: String(rows[i][colSection]).trim(),
         days: String(rows[i][colDays]).trim(),
-        startTime: colStart !== -1 ? rows[i][colStart] : "",
-        endTime: colEnd !== -1 ? rows[i][colEnd] : "",
+        startTime: colStart !== -1 ? rows[i][colStart] : '',
+        endTime: colEnd !== -1 ? rows[i][colEnd] : '',
       });
     }
   }
 
   if (approved.length === 0) return 0;
 
-  var bySection = groupByKey(approved, "section");
+  var bySection = groupByKey(approved, 'section');
   var processed = 0;
 
   var sectionNames = Object.keys(bySection);
@@ -221,7 +185,7 @@ function processApprovedYellowSheets(ss) {
     var sheet = ss.getSheetByName(sectionName);
 
     if (!sheet) {
-      console.warn("YellowSheets: section tab not found — " + sectionName);
+      console.warn('YellowSheets: section tab not found — ' + sectionName);
       continue;
     }
 
@@ -238,22 +202,17 @@ function processApprovedYellowSheets(ss) {
       var item = items[k];
       var sheetRow = nameMap[item.name];
       if (!sheetRow) {
-        console.warn(
-          "YellowSheets: student not found in " +
-            sectionName +
-            " — " +
-            item.name,
-        );
+        console.warn('YellowSheets: student not found in ' + sectionName + ' — ' + item.name);
         continue;
       }
 
       // Build note text
-      var noteText = "Class conflict: " + item.days;
+      var noteText = 'Class conflict: ' + item.days;
       if (item.startTime || item.endTime) {
         var startStr = formatTimeValue(item.startTime);
         var endStr = formatTimeValue(item.endTime);
         if (startStr && endStr) {
-          noteText += " " + startStr + "-" + endStr;
+          noteText += ' ' + startStr + '-' + endStr;
         }
       }
 
@@ -261,7 +220,7 @@ function processApprovedYellowSheets(ss) {
       var nameCell = sheet.getRange(sheetRow, 1);
       var existing = nameCell.getNote();
       if (existing) {
-        nameCell.setNote(existing + "\n" + noteText);
+        nameCell.setNote(existing + '\n' + noteText);
       } else {
         nameCell.setNote(noteText);
       }
@@ -271,11 +230,9 @@ function processApprovedYellowSheets(ss) {
   }
 
   // Mark processed rows as Completed
-  var yellowSheet = getSheet("Yellow Sheets");
+  var yellowSheet = getSheet('Yellow Sheets');
   for (var j = 0; j < approved.length; j++) {
-    yellowSheet
-      .getRange(approved[j].rowIndex, colStatus + 1)
-      .setValue(completeStatus);
+    yellowSheet.getRange(approved[j].rowIndex, colStatus + 1).setValue(completeStatus);
   }
 
   return processed;
@@ -322,7 +279,7 @@ function applyAttendanceUpdates(ss, bySection, attendanceValue, getDate) {
     var sheet = ss.getSheetByName(sectionName);
 
     if (!sheet) {
-      console.warn("QueueProcessor: section tab not found — " + sectionName);
+      console.warn('QueueProcessor: section tab not found — ' + sectionName);
       continue;
     }
 
@@ -346,28 +303,23 @@ function applyAttendanceUpdates(ss, bySection, attendanceValue, getDate) {
       var item = items[k];
       var rowIdx = nameMap[item.name];
       if (rowIdx === undefined) {
-        console.warn(
-          "QueueProcessor: student not found in " +
-            sectionName +
-            " — " +
-            item.name,
-        );
+        console.warn('QueueProcessor: student not found in ' + sectionName + ' — ' + item.name);
         continue;
       }
 
       var targetDate = getDate(item);
       if (!targetDate || isNaN(targetDate.getTime())) {
-        console.warn("QueueProcessor: invalid date for " + item.name);
+        console.warn('QueueProcessor: invalid date for ' + item.name);
         continue;
       }
 
       var colIdx = matchDateColumn(sectionHeaders, targetDate);
       if (colIdx === -1) {
         console.warn(
-          "QueueProcessor: no matching date column for " +
+          'QueueProcessor: no matching date column for ' +
             item.name +
-            " on " +
-            Utilities.formatDate(targetDate, getAppTimezone(), "M/d"),
+            ' on ' +
+            Utilities.formatDate(targetDate, getAppTimezone(), 'M/d')
         );
         continue;
       }
@@ -382,9 +334,7 @@ function applyAttendanceUpdates(ss, bySection, attendanceValue, getDate) {
       var dateCols = allData.map(function (row) {
         return row.slice(1);
       });
-      sheet
-        .getRange(1, 2, dateCols.length, dateCols[0].length)
-        .setValues(dateCols);
+      sheet.getRange(1, 2, dateCols.length, dateCols[0].length).setValues(dateCols);
     }
   }
 
@@ -398,9 +348,9 @@ function applyAttendanceUpdates(ss, bySection, attendanceValue, getDate) {
  * @returns {string} Formatted time string (e.g., "2:30 PM"), or empty string.
  */
 function formatTimeValue(timeValue) {
-  if (!timeValue) return "";
+  if (!timeValue) return '';
   if (timeValue instanceof Date) {
-    return Utilities.formatDate(timeValue, getAppTimezone(), "h:mm a");
+    return Utilities.formatDate(timeValue, getAppTimezone(), 'h:mm a');
   }
   return String(timeValue).trim();
 }

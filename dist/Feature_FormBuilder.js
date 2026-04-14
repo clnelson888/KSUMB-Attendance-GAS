@@ -275,9 +275,7 @@ function _getRosterData() {
   var colSection = headers.indexOf('Section');
 
   if (colFullName === -1 || colSection === -1) {
-    throw new Error(
-      'Database tab missing "Full Name" or "Section" column. Found: ' + JSON.stringify(headers),
-    );
+    throw new Error('Database tab missing "Full Name" or "Section" column. Found: ' + JSON.stringify(headers));
   }
 
   var seenNames = {};
@@ -318,7 +316,10 @@ function _getRosterData() {
 function inspectDatabase() {
   var data = getTableData('Database');
   console.log('Row count (including header): ' + data.length);
-  if (data.length === 0) { console.log('Database tab is completely empty.'); return; }
+  if (data.length === 0) {
+    console.log('Database tab is completely empty.');
+    return;
+  }
   console.log('Headers: ' + JSON.stringify(data[0]));
   var preview = Math.min(data.length, 6);
   for (var i = 1; i < preview; i++) {

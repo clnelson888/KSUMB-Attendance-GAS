@@ -6,7 +6,17 @@
  */
 const SYSTEM_SHEET_HEADERS = {
   Data: ['Key', 'Value'],
-  'Pink Sheets': ['Submission ID', 'Submitted At', 'Full Name', 'Section', 'Date', 'Reason', 'Status', 'Processed At', 'Error'],
+  'Pink Sheets': [
+    'Submission ID',
+    'Submitted At',
+    'Full Name',
+    'Section',
+    'Date',
+    'Reason',
+    'Status',
+    'Processed At',
+    'Error',
+  ],
   'Late Check-Ins': [
     'Submission ID',
     'Submitted At',
@@ -75,7 +85,10 @@ function ensureSheetExists(ss, sheetName) {
  * @returns {boolean} True if headers were written.
  */
 function ensureHeaders(sheet, headers) {
-  var existingHeader = sheet.getLastColumn() > 0 ? sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), headers.length)).getValues()[0] : [];
+  var existingHeader =
+    sheet.getLastColumn() > 0
+      ? sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), headers.length)).getValues()[0]
+      : [];
   var hasAnyHeaderValue = existingHeader.some(function (value) {
     return String(value || '').trim() !== '';
   });
@@ -203,13 +216,13 @@ function initializeSystem() {
     'initializeSystem',
     'INFO',
     '',
-    'Initialized workbook support tabs. Added ' + configRowsAdded + ' config row(s).',
+    'Initialized workbook support tabs. Added ' + configRowsAdded + ' config row(s).'
   );
 
   SpreadsheetApp.getUi().alert(
     'Initialize System',
     results.join('\n') + '\n\nAdded ' + configRowsAdded + ' missing Data config row(s).',
-    SpreadsheetApp.getUi().ButtonSet.OK,
+    SpreadsheetApp.getUi().ButtonSet.OK
   );
 }
 
@@ -232,8 +245,7 @@ function validateEnvironment() {
     }
 
     var expectedHeaders = SYSTEM_SHEET_HEADERS[sheetName];
-    var actualHeaders =
-      sheet.getLastColumn() > 0 ? sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0] : [];
+    var actualHeaders = sheet.getLastColumn() > 0 ? sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0] : [];
 
     for (var h = 0; h < expectedHeaders.length; h++) {
       if (actualHeaders.indexOf(expectedHeaders[h]) === -1) {
@@ -287,7 +299,7 @@ function validateEnvironment() {
     'validateEnvironment',
     errors.length > 0 ? 'ERROR' : 'INFO',
     '',
-    'Environment validation completed with ' + errors.length + ' error(s) and ' + warnings.length + ' warning(s).',
+    'Environment validation completed with ' + errors.length + ' error(s) and ' + warnings.length + ' warning(s).'
   );
 
   SpreadsheetApp.getUi().alert('Environment Validation', report, SpreadsheetApp.getUi().ButtonSet.OK);

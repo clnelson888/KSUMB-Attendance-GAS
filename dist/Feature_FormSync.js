@@ -171,8 +171,7 @@ function onLateSubmit(e) {
       section: _field(fields, 'What is your section?'),
       arrival: submittedAt,
       reason: _field(fields, 'Reason for late arrival'),
-      otherExplanation:
-        _field(fields, 'If "Other", please explain:') || _field(fields, 'If “Other”, please explain:'),
+      otherExplanation: _field(fields, 'If "Other", please explain:') || _field(fields, 'If “Other”, please explain:'),
     };
 
     lateSheetInfo = appendLateCheckInQueueRow(payload);

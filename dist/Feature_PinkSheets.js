@@ -166,7 +166,10 @@ function processPinkSheetActions(ss) {
 
       var payload = {
         submissionId: String(allData[i][headerMap.submissionId] || '').trim(),
-        submittedAt: allData[i][headerMap.submittedAt] instanceof Date ? allData[i][headerMap.submittedAt] : new Date(allData[i][headerMap.submittedAt]),
+        submittedAt:
+          allData[i][headerMap.submittedAt] instanceof Date
+            ? allData[i][headerMap.submittedAt]
+            : new Date(allData[i][headerMap.submittedAt]),
         name: String(allData[i][headerMap.fullName] || '').trim(),
         section: String(allData[i][headerMap.section] || '').trim(),
         date: allData[i][headerMap.date],
@@ -201,11 +204,7 @@ function processPinkSheetsForDate(targetDate) {
 
   var headers = allData[0];
   var headerMap = getPinkSheetHeaderMap(headers);
-  var statuses = [
-    getStatusValue('PENDING'),
-    getStatusValue('APPROVED'),
-    getStatusValue('DENIED'),
-  ];
+  var statuses = [getStatusValue('PENDING'), getStatusValue('APPROVED'), getStatusValue('DENIED')];
   var processed = 0;
   var lock = LockService.getScriptLock();
 
@@ -215,12 +214,16 @@ function processPinkSheetsForDate(targetDate) {
       var statusValue = String(allData[i][headerMap.status] || '').trim();
       if (statuses.indexOf(statusValue) === -1) continue;
 
-      var sheetDate = allData[i][headerMap.date] instanceof Date ? allData[i][headerMap.date] : new Date(allData[i][headerMap.date]);
+      var sheetDate =
+        allData[i][headerMap.date] instanceof Date ? allData[i][headerMap.date] : new Date(allData[i][headerMap.date]);
       if (!isSameCalendarDate(sheetDate, targetDate)) continue;
 
       var payload = {
         submissionId: String(allData[i][headerMap.submissionId] || '').trim(),
-        submittedAt: allData[i][headerMap.submittedAt] instanceof Date ? allData[i][headerMap.submittedAt] : new Date(allData[i][headerMap.submittedAt]),
+        submittedAt:
+          allData[i][headerMap.submittedAt] instanceof Date
+            ? allData[i][headerMap.submittedAt]
+            : new Date(allData[i][headerMap.submittedAt]),
         name: String(allData[i][headerMap.fullName] || '').trim(),
         section: String(allData[i][headerMap.section] || '').trim(),
         date: sheetDate,

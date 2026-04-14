@@ -57,9 +57,7 @@
     <div id="error"></div>
 
     <div class="actions">
-      <button id="cancel-btn" onclick="google.script.host.close()">
-        Cancel
-      </button>
+      <button id="cancel-btn" onclick="google.script.host.close()">Cancel</button>
       <button id="submit-btn" onclick="submitForm()">Generate</button>
     </div>
 
@@ -68,35 +66,34 @@
       (function () {
         var today = new Date();
         var yyyy = today.getFullYear();
-        var mm = String(today.getMonth() + 1).padStart(2, "0");
-        var dd = String(today.getDate()).padStart(2, "0");
-        document.getElementById("date-input").value =
-          yyyy + "-" + mm + "-" + dd;
+        var mm = String(today.getMonth() + 1).padStart(2, '0');
+        var dd = String(today.getDate()).padStart(2, '0');
+        document.getElementById('date-input').value = yyyy + '-' + mm + '-' + dd;
       })();
 
       function submitForm() {
-        var dateVal = document.getElementById("date-input").value;
-        var errorEl = document.getElementById("error");
+        var dateVal = document.getElementById('date-input').value;
+        var errorEl = document.getElementById('error');
 
         if (!dateVal) {
-          errorEl.textContent = "Please enter a date.";
-          errorEl.style.display = "block";
+          errorEl.textContent = 'Please enter a date.';
+          errorEl.style.display = 'block';
           return;
         }
 
-        errorEl.style.display = "none";
-        document.getElementById("submit-btn").disabled = true;
-        document.getElementById("submit-btn").textContent = "Generating...";
+        errorEl.style.display = 'none';
+        document.getElementById('submit-btn').disabled = true;
+        document.getElementById('submit-btn').textContent = 'Generating...';
 
         google.script.run
           .withSuccessHandler(function () {
             google.script.host.close();
           })
           .withFailureHandler(function (err) {
-            errorEl.textContent = err.message || "An error occurred.";
-            errorEl.style.display = "block";
-            document.getElementById("submit-btn").disabled = false;
-            document.getElementById("submit-btn").textContent = "Generate";
+            errorEl.textContent = err.message || 'An error occurred.';
+            errorEl.style.display = 'block';
+            document.getElementById('submit-btn').disabled = false;
+            document.getElementById('submit-btn').textContent = 'Generate';
           })
           .buildConcernList(dateVal);
       }
