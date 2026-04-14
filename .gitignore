@@ -1,5 +1,4 @@
 node_modules
-.claude
 .vscode/*
 !.vscode/extensions.json
 .DS_Store

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"\\\\.\\(md|txt|json\\)$\")",
+      "Bash(npm list:*)",
+      "Bash(npm run:*)",
+      "mcp__google-dev-knowledge__search_documents",
+      "mcp__google-apps-script__script_projects_get_content"
+    ]
+  }
+}
