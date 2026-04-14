@@ -116,7 +116,7 @@ function upsertYellowSheetSubmission(payload) {
   var targetRow = existingRow === -1 ? yellowSheet.getLastRow() + 1 : existingRow;
   yellowSheet.getRange(targetRow, 1, 1, rowValues.length).setValues([rowValues]);
 
-  if (existingRow !== -1 && previousStatus === getStatusValue('COMPLETE')) {
+  if (existingRow !== -1 && isCompleteStatusValue(previousStatus)) {
     var nameCell = findYellowStudentNameCell(ss, payload.section, payload.name);
     if (nameCell) {
       nameCell.setNote(getPendingYellowSheetNoteText());

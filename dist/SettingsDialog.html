@@ -1,0 +1,325 @@
+<!doctype html>
+<html>
+  <head>
+    <base target="_top" />
+    <style>
+      :root {
+        --bg: #f4f1ea;
+        --panel: #fffdf8;
+        --line: #d7ccbb;
+        --text: #231f19;
+        --muted: #6f665a;
+        --accent: #1f5f5b;
+        --accent-strong: #154744;
+        --danger: #a22c29;
+      }
+
+      body {
+        margin: 0;
+        padding: 18px;
+        font: 13px/1.4 "Segoe UI", Tahoma, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, #fff9ec, transparent 42%),
+          linear-gradient(180deg, #f7f2e8 0%, var(--bg) 100%);
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 18px;
+        box-shadow: 0 10px 30px rgba(35, 31, 25, 0.08);
+      }
+
+      h1 {
+        margin: 0 0 6px;
+        font-size: 20px;
+      }
+
+      .intro {
+        margin: 0 0 14px;
+        color: var(--muted);
+      }
+
+      .legacy {
+        margin: 0 0 14px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: #fff4d8;
+        color: #7a5711;
+        border: 1px solid #ecd18a;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px 14px;
+      }
+
+      .field,
+      .field-wide {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .field-wide {
+        grid-column: 1 / -1;
+      }
+
+      label {
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+
+      .hint {
+        color: var(--muted);
+        font-size: 11px;
+        margin-top: 4px;
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 9px 10px;
+        font: inherit;
+        color: var(--text);
+        background: #fff;
+      }
+
+      textarea {
+        min-height: 92px;
+        resize: vertical;
+      }
+
+      details {
+        margin-top: 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fbf8f1;
+      }
+
+      summary {
+        cursor: pointer;
+        padding: 12px 14px;
+        font-weight: 600;
+      }
+
+      details .content {
+        padding: 0 14px 14px;
+      }
+
+      .status {
+        display: none;
+        margin-top: 14px;
+        padding: 10px 12px;
+        border-radius: 10px;
+      }
+
+      .status.error {
+        display: block;
+        background: #fdeceb;
+        color: var(--danger);
+        border: 1px solid #efc1be;
+      }
+
+      .status.success {
+        display: block;
+        background: #e8f5f0;
+        color: var(--accent-strong);
+        border: 1px solid #b8ddd1;
+      }
+
+      .actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 16px;
+      }
+
+      .actions-right {
+        display: flex;
+        gap: 8px;
+      }
+
+      button {
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 14px;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .secondary {
+        background: #ece5d8;
+        color: var(--text);
+      }
+
+      .primary {
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .primary:disabled,
+      .secondary:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="panel">
+      <h1>Attendance Settings</h1>
+      <p class="intro">Project defaults now live in document properties instead of the visible <code>Data</code> tab.</p>
+
+      <? if (settingsModel.hasLegacyDataSheet) { ?>
+      <div class="legacy">A legacy <code>Data</code> tab is still present. Its values can be imported during initialization, but it is no longer the primary config source.</div>
+      <? } ?>
+
+      <div class="grid">
+        <div class="field-wide">
+          <label for="SECTION_TABS">Sections</label>
+          <textarea id="SECTION_TABS"><?= settingsModel.values.SECTION_TABS ?></textarea>
+          <div class="hint">One section per line.</div>
+        </div>
+
+        <div class="field">
+          <label for="TIMEZONE">Timezone</label>
+          <input id="TIMEZONE" type="text" value="<?= settingsModel.values.TIMEZONE ?>" />
+        </div>
+
+        <div class="field">
+          <label for="REHEARSAL_START_TIME">Default Rehearsal Start</label>
+          <input id="REHEARSAL_START_TIME" type="time" value="<?= settingsModel.values.REHEARSAL_START_TIME ?>" />
+        </div>
+
+        <div class="field">
+          <label for="LATE_THRESHOLD_MINUTES">Late Threshold Minutes</label>
+          <input id="LATE_THRESHOLD_MINUTES" type="number" min="0" step="1" value="<?= settingsModel.values.LATE_THRESHOLD_MINUTES ?>" />
+        </div>
+
+        <div class="field-wide">
+          <label for="LATE_REASONS">Late Reasons</label>
+          <textarea id="LATE_REASONS"><?= settingsModel.values.LATE_REASONS ?></textarea>
+          <div class="hint">One reason per line.</div>
+        </div>
+      </div>
+
+      <details>
+        <summary>Advanced Labels</summary>
+        <div class="content">
+          <div class="grid">
+            <div class="field">
+              <label for="STATUS_PENDING">Pending Status</label>
+              <input id="STATUS_PENDING" type="text" value="<?= settingsModel.values.STATUS_PENDING ?>" />
+            </div>
+            <div class="field">
+              <label for="STATUS_APPROVED">Approved Status</label>
+              <input id="STATUS_APPROVED" type="text" value="<?= settingsModel.values.STATUS_APPROVED ?>" />
+            </div>
+            <div class="field">
+              <label for="STATUS_DENIED">Denied Status</label>
+              <input id="STATUS_DENIED" type="text" value="<?= settingsModel.values.STATUS_DENIED ?>" />
+            </div>
+            <div class="field">
+              <label for="STATUS_COMPLETE">Completed Status</label>
+              <input id="STATUS_COMPLETE" type="text" value="<?= settingsModel.values.STATUS_COMPLETE ?>" />
+            </div>
+            <div class="field">
+              <label for="ATTENDANCE_PRESENT">Present Label</label>
+              <input id="ATTENDANCE_PRESENT" type="text" value="<?= settingsModel.values.ATTENDANCE_PRESENT ?>" />
+            </div>
+            <div class="field">
+              <label for="ATTENDANCE_TARDY">Tardy Label</label>
+              <input id="ATTENDANCE_TARDY" type="text" value="<?= settingsModel.values.ATTENDANCE_TARDY ?>" />
+            </div>
+            <div class="field">
+              <label for="ATTENDANCE_ABSENT">Absent Label</label>
+              <input id="ATTENDANCE_ABSENT" type="text" value="<?= settingsModel.values.ATTENDANCE_ABSENT ?>" />
+            </div>
+            <div class="field">
+              <label for="ATTENDANCE_EXCUSED">Excused Label</label>
+              <input id="ATTENDANCE_EXCUSED" type="text" value="<?= settingsModel.values.ATTENDANCE_EXCUSED ?>" />
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <div id="status" class="status"></div>
+
+      <div class="actions">
+        <button class="secondary" id="reset-btn" onclick="resetDefaults()">Reset To Defaults</button>
+        <div class="actions-right">
+          <button class="secondary" onclick="google.script.host.close()">Cancel</button>
+          <button class="primary" id="save-btn" onclick="saveSettings()">Save Settings</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      var FIELD_IDS = [
+        'SECTION_TABS',
+        'TIMEZONE',
+        'REHEARSAL_START_TIME',
+        'LATE_THRESHOLD_MINUTES',
+        'LATE_REASONS',
+        'STATUS_PENDING',
+        'STATUS_APPROVED',
+        'STATUS_DENIED',
+        'STATUS_COMPLETE',
+        'ATTENDANCE_PRESENT',
+        'ATTENDANCE_TARDY',
+        'ATTENDANCE_ABSENT',
+        'ATTENDANCE_EXCUSED',
+      ];
+
+      var DEFAULTS = <?!= JSON.stringify(settingsModel.defaults) ?>;
+
+      function getPayload() {
+        var payload = {};
+        for (var i = 0; i < FIELD_IDS.length; i++) {
+          var id = FIELD_IDS[i];
+          payload[id] = document.getElementById(id).value;
+        }
+        return payload;
+      }
+
+      function setBusy(busy, saveLabel) {
+        document.getElementById('save-btn').disabled = busy;
+        document.getElementById('reset-btn').disabled = busy;
+        document.getElementById('save-btn').textContent = saveLabel || 'Save Settings';
+      }
+
+      function showStatus(message, isError) {
+        var el = document.getElementById('status');
+        el.className = 'status ' + (isError ? 'error' : 'success');
+        el.textContent = message;
+      }
+
+      function saveSettings() {
+        setBusy(true, 'Saving...');
+        google.script.run
+          .withSuccessHandler(function (message) {
+            setBusy(false, 'Save Settings');
+            showStatus(message, false);
+          })
+          .withFailureHandler(function (err) {
+            setBusy(false, 'Save Settings');
+            showStatus(err.message || 'Unable to save settings.', true);
+          })
+          .saveSettings(getPayload());
+      }
+
+      function resetDefaults() {
+        for (var i = 0; i < FIELD_IDS.length; i++) {
+          var id = FIELD_IDS[i];
+          document.getElementById(id).value = DEFAULTS[id] || '';
+        }
+        showStatus('Default values loaded into the form. Save to apply them.', false);
+      }
+    </script>
+  </body>
+</html>

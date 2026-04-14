@@ -7,6 +7,7 @@
 function onOpen(e) {
   SpreadsheetApp.getUi()
     .createMenu('Attendance')
+    .addItem('Settings', 'openSettingsDialog')
     .addItem('Validate environment', 'validateEnvironment')
     .addItem('Initialize system', 'initializeSystem')
     .addSeparator()
@@ -23,4 +24,38 @@ function onOpen(e) {
     .addItem('Process approved requests', 'processApprovedRequests')
     .addItem('Generate concern list', 'generateConcernList')
     .addToUi();
+}
+
+/**
+ * Runs when a user edits the spreadsheet directly.
+ * Processes Yellow Sheet approvals/denials as soon as staff change Status.
+ *
+ * @param {GoogleAppsScript.Events.SheetsOnEdit} e
+ */
+function onEdit(e) {
+  if (!e || !e.range) return;
+
+  var range = e.range;
+  var sheet = range.getSheet();
+  if (!sheet) return;
+
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var statusColumn = headers.indexOf('Status') + 1;
+  if (statusColumn <= 0) return;
+
+  if (
+    !shouldProcessYellowStatusEdit(
+      sheet.getName(),
+      range.getRow(),
+      range.getColumn(),
+      statusColumn,
+      range.getValue(),
+      getStatusValue('APPROVED'),
+      getStatusValue('DENIED')
+    )
+  ) {
+    return;
+  }
+
+  processYellowSheetActions(SpreadsheetApp.getActiveSpreadsheet());
 }

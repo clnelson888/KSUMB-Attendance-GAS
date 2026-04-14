@@ -7,9 +7,7 @@
 /**
  * Pushes active member names from the Database tab into all three forms.
  *
- * Pink / Yellow update "Your Full Name" and "Your Section" list questions.
- * Late updates each section page's "Your Name" list with that section's
- * members only.
+ * All forms use a section-router first page plus per-section name lists.
  */
 function syncRosterToForms() {
   var ids = _getStoredFormIds();
@@ -25,55 +23,12 @@ function syncRosterToForms() {
   var roster = _getRosterData();
   var allNames = roster.allNames;
   var namesBySection = roster.namesBySection;
-  var sectionTabs = getConfiguredSectionTabs();
   var updatedQuestions = 0;
 
-  var simpleIds = [ids.PINK, ids.YELLOW];
-  for (var f = 0; f < simpleIds.length; f++) {
-    if (!simpleIds[f]) continue;
-    var form = FormApp.openById(simpleIds[f]);
-    var items = form.getItems();
-
-    for (var j = 0; j < items.length; j++) {
-      var item = items[j];
-      var title = item.getTitle();
-      var type = item.getType();
-
-      if (title === 'Your Full Name' && type === FormApp.ItemType.LIST && allNames.length > 0) {
-        item.asListItem().setChoiceValues(allNames);
-        updatedQuestions++;
-      }
-
-      if (title === 'Your Section' && type === FormApp.ItemType.LIST) {
-        item.asListItem().setChoiceValues(sectionTabs);
-        updatedQuestions++;
-      }
-    }
-  }
-
-  if (ids.LATE) {
-    var lateForm = FormApp.openById(ids.LATE);
-    var lateItems = lateForm.getItems();
-    var currentSection = null;
-
-    for (var k = 0; k < lateItems.length; k++) {
-      var lateItem = lateItems[k];
-      var lateType = lateItem.getType();
-      var lateTitle = lateItem.getTitle();
-
-      if (lateType === FormApp.ItemType.PAGE_BREAK) {
-        var match = lateTitle.match(/^(.+?)\s+[\u2014\u2013-]\s+Select Your Name/i);
-        currentSection = match ? match[1].trim() : null;
-        continue;
-      }
-
-      if (lateType === FormApp.ItemType.LIST && lateTitle === 'Your Name' && currentSection) {
-        var sectionNames = namesBySection[currentSection] || [];
-        lateItem.asListItem().setChoiceValues(sectionNames.length > 0 ? sectionNames : ['(no members)']);
-        updatedQuestions++;
-        currentSection = null;
-      }
-    }
+  var formIds = [ids.PINK, ids.LATE, ids.YELLOW];
+  for (var f = 0; f < formIds.length; f++) {
+    if (!formIds[f]) continue;
+    updatedQuestions += _syncFormSectionNameLists(FormApp.openById(formIds[f]), namesBySection);
   }
 
   var msg = 'Synced ' + allNames.length + ' member(s) across ' + updatedQuestions + ' form question(s).';
@@ -125,16 +80,20 @@ function installFormSubmitTriggers() {
  * @param {GoogleAppsScript.Events.FormsOnFormSubmit} e
  */
 function onPinkSubmit(e) {
+  var pinkSheetInfo = null;
+
   try {
     var fields = _responseToFields(e.response);
     var submissionId = generateSubmissionId();
     var submittedAt = e.response.getTimestamp();
-    var name = _field(fields, 'Your Full Name');
-    var section = _field(fields, 'Your Section');
+    var name = requireResolvedSubmittedName(_field(fields, FORM_NAME_LIST_TITLE), _field(fields, FORM_MANUAL_NAME_TITLE));
+    var section = _field(fields, FORM_SECTION_QUESTION_TITLE);
     var date = _field(fields, 'Date of Absence');
     var reason = _field(fields, 'Reason');
+    var pinkSheet = getSheet('Pink Sheets');
+    var headerMap = getPinkSheetHeaderMap(pinkSheet.getRange(1, 1, 1, pinkSheet.getLastColumn()).getValues()[0]);
 
-    getSheet('Pink Sheets').appendRow([
+    pinkSheet.appendRow([
       submissionId,
       submittedAt,
       name,
@@ -145,9 +104,40 @@ function onPinkSubmit(e) {
       '',
       '',
     ]);
+    pinkSheetInfo = {
+      sheet: pinkSheet,
+      headerMap: headerMap,
+      rowIndex: pinkSheet.getLastRow(),
+    };
+
+    var lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    try {
+      var outcome = processSinglePinkSheet(SpreadsheetApp.getActiveSpreadsheet(), {
+        submissionId: submissionId,
+        submittedAt: submittedAt,
+        name: name,
+        section: section,
+        date: date,
+        status: getStatusValue('PENDING'),
+      });
+      writePinkSheetOutcome(pinkSheetInfo.sheet, pinkSheetInfo.headerMap, pinkSheetInfo.rowIndex, outcome);
+      SpreadsheetApp.flush();
+    } finally {
+      SpreadsheetApp.flush();
+      lock.releaseLock();
+    }
+
     console.log('FormSync: Pink -> ' + name + ' | ' + section + ' | ' + date);
   } catch (err) {
     console.error('FormSync: onPinkSubmit error -> ' + err.message);
+    if (pinkSheetInfo) {
+      writePinkSheetOutcome(pinkSheetInfo.sheet, pinkSheetInfo.headerMap, pinkSheetInfo.rowIndex, {
+        statusValue: getStatusValue('PENDING'),
+        processedAt: '',
+        errorMessage: err.message,
+      });
+    }
     logSystemEvent('FormSync', 'onPinkSubmit', 'ERROR', '', err.message);
   }
 }
@@ -167,8 +157,8 @@ function onLateSubmit(e) {
     var payload = {
       submissionId: submissionId,
       submittedAt: submittedAt,
-      name: _field(fields, 'Your Name'),
-      section: _field(fields, 'What is your section?'),
+      name: requireResolvedSubmittedName(_field(fields, FORM_NAME_LIST_TITLE), _field(fields, FORM_MANUAL_NAME_TITLE)),
+      section: _field(fields, FORM_SECTION_QUESTION_TITLE),
       arrival: submittedAt,
       reason: _field(fields, 'Reason for late arrival'),
       otherExplanation: _field(fields, 'If "Other", please explain:') || _field(fields, 'If “Other”, please explain:'),
@@ -213,8 +203,8 @@ function onYellowSubmit(e) {
       responseId: e.response.getId(),
       submittedAt: e.response.getTimestamp(),
       lastUpdatedAt: e.response.getTimestamp(),
-      name: _field(fields, 'Your Full Name'),
-      section: _field(fields, 'Your Section'),
+      name: requireResolvedSubmittedName(_field(fields, FORM_NAME_LIST_TITLE), _field(fields, FORM_MANUAL_NAME_TITLE)),
+      section: _field(fields, FORM_SECTION_QUESTION_TITLE),
       days: _field(fields, 'Conflict Days'),
       startTime: _field(fields, 'Conflict Start Time'),
       endTime: _field(fields, 'Conflict End Time'),
@@ -306,4 +296,30 @@ function _field(fields, key) {
  */
 function generateSubmissionId() {
   return Utilities.getUuid();
+}
+
+function _syncFormSectionNameLists(form, namesBySection) {
+  var items = form.getItems();
+  var currentSection = '';
+  var updatedQuestions = 0;
+
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    var type = item.getType();
+    var title = item.getTitle();
+
+    if (type === FormApp.ItemType.PAGE_BREAK) {
+      currentSection = extractSectionFromPageTitle(title);
+      continue;
+    }
+
+    if (type === FormApp.ItemType.LIST && title === FORM_NAME_LIST_TITLE && currentSection) {
+      var sectionNames = namesBySection[currentSection] || [];
+      item.asListItem().setChoiceValues(sectionNames.length > 0 ? sectionNames : ['(no members)']);
+      updatedQuestions++;
+      currentSection = '';
+    }
+  }
+
+  return updatedQuestions;
 }

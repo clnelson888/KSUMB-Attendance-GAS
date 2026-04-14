@@ -120,7 +120,7 @@ function processSinglePinkSheet(ss, payload) {
 
   var noteText = buildPinkSheetNoteText(
     Utilities.formatDate(payload.submittedAt, getAppTimezone(), 'M/d/yyyy h:mm a'),
-    payload.status
+    payload.status === statuses.pending ? statuses.complete : payload.status
   );
   var targetCell = sectionSheet.getRange(studentRow, colIndex + 1);
 
@@ -141,8 +141,7 @@ function processSinglePinkSheet(ss, payload) {
 }
 
 /**
- * Processes actionable Pink Sheet rows. This includes Approved rows and Denied
- * rows that still need their note applied.
+ * Processes Pink Sheet rows that are waiting to be applied.
  *
  * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ss
  * @returns {number}
@@ -154,7 +153,7 @@ function processPinkSheetActions(ss) {
 
   var headers = allData[0];
   var headerMap = getPinkSheetHeaderMap(headers);
-  var actionableStatuses = [getStatusValue('APPROVED'), getStatusValue('DENIED')];
+  var actionableStatuses = [getStatusValue('PENDING'), getStatusValue('APPROVED'), getStatusValue('DENIED')];
   var processed = 0;
   var lock = LockService.getScriptLock();
 

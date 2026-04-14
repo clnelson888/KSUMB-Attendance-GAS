@@ -5,7 +5,6 @@
  * @type {Object.<string, string[]>}
  */
 const SYSTEM_SHEET_HEADERS = {
-  Data: ['Key', 'Value'],
   'Pink Sheets': [
     'Submission ID',
     'Submitted At',
@@ -103,33 +102,53 @@ function ensureHeaders(sheet, headers) {
 }
 
 /**
- * Ensures the Data sheet contains the default configuration keys.
+ * Updates legacy status values to the current vocabulary.
  *
- * @param {GoogleAppsScript.Spreadsheet.Sheet} dataSheet
- * @returns {number} Number of rows inserted.
+ * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ss
+ * @returns {number} Number of cells updated.
  */
-function ensureDefaultConfigRows(dataSheet) {
-  var data = dataSheet.getDataRange().getValues();
-  var existingKeys = {};
-  for (var i = 1; i < data.length; i++) {
-    var key = String(data[i][0] || '').trim();
-    if (key) existingKeys[key] = true;
-  }
-
-  var rowsToAppend = [];
-  var keys = Object.keys(DEFAULT_CONFIG_VALUES);
-  for (var j = 0; j < keys.length; j++) {
-    if (!existingKeys[keys[j]]) {
-      rowsToAppend.push([keys[j], DEFAULT_CONFIG_VALUES[keys[j]]]);
+function normalizeLegacyStatusValues(ss) {
+  var updates = 0;
+  var propertyStore = getConfigPropertyStore();
+  if (propertyStore) {
+    var propertyKey = getConfigPropertyKey(CONFIG_KEYS.STATUS_COMPLETE);
+    var propertyValue = String(propertyStore.getProperties()[propertyKey] || '').trim();
+    if (propertyValue === 'Complete') {
+      var normalizedProperty = {};
+      normalizedProperty[propertyKey] = 'Completed';
+      propertyStore.setProperties(normalizedProperty, false);
+      updates++;
+      resetConfigCache();
     }
   }
 
-  if (rowsToAppend.length > 0) {
-    var startRow = Math.max(dataSheet.getLastRow(), 1) + 1;
-    dataSheet.getRange(startRow, 1, rowsToAppend.length, 2).setValues(rowsToAppend);
+  var queueSheetNames = ['Pink Sheets', 'Late Check-Ins', 'Yellow Sheets'];
+  var completedStatus = getStatusValue('COMPLETE');
+  for (var j = 0; j < queueSheetNames.length; j++) {
+    var queueSheet = ss.getSheetByName(queueSheetNames[j]);
+    if (!queueSheet || queueSheet.getLastRow() < 2) continue;
+
+    var headerRow = queueSheet.getRange(1, 1, 1, queueSheet.getLastColumn()).getValues()[0];
+    var statusIndex = headerRow.indexOf('Status');
+    if (statusIndex === -1) continue;
+
+    var statusRange = queueSheet.getRange(2, statusIndex + 1, queueSheet.getLastRow() - 1, 1);
+    var statusValues = statusRange.getValues();
+    var changed = false;
+    for (var r = 0; r < statusValues.length; r++) {
+      if (String(statusValues[r][0] || '').trim() === 'Complete') {
+        statusValues[r][0] = completedStatus;
+        updates++;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      statusRange.setValues(statusValues);
+    }
   }
 
-  return rowsToAppend.length;
+  return updates;
 }
 
 /**
@@ -192,8 +211,10 @@ function initializeSystem() {
     results.push((ensured.created ? 'Created ' : 'Found ') + sheetName + (wroteHeaders ? ' and added headers' : ''));
   }
 
-  var dataSheet = ss.getSheetByName('Data');
-  var configRowsAdded = ensureDefaultConfigRows(dataSheet);
+  var importedLegacyConfig = importLegacyDataConfigToProperties(false);
+  var configPropertiesAdded = ensureDefaultConfigProperties();
+  resetConfigCache();
+  var legacyStatusUpdates = normalizeLegacyStatusValues(ss);
   resetConfigCache();
 
   var queueSheets = ['Pink Sheets', 'Late Check-Ins', 'Yellow Sheets'];
@@ -216,12 +237,27 @@ function initializeSystem() {
     'initializeSystem',
     'INFO',
     '',
-    'Initialized workbook support tabs. Added ' + configRowsAdded + ' config row(s).'
+    'Initialized workbook support tabs. Imported ' +
+      importedLegacyConfig +
+      ' legacy setting(s), seeded ' +
+      configPropertiesAdded +
+      ' property default(s), and normalized ' +
+      legacyStatusUpdates +
+      ' legacy status value(s).'
   );
 
   SpreadsheetApp.getUi().alert(
     'Initialize System',
-    results.join('\n') + '\n\nAdded ' + configRowsAdded + ' missing Data config row(s).',
+    results.join('\n') +
+      '\n\nImported ' +
+      importedLegacyConfig +
+      ' legacy setting(s) from the Data tab.' +
+      '\nSeeded ' +
+      configPropertiesAdded +
+      ' missing document property setting(s).' +
+      '\nNormalized ' +
+      legacyStatusUpdates +
+      ' legacy status value(s).',
     SpreadsheetApp.getUi().ButtonSet.OK
   );
 }
@@ -265,12 +301,16 @@ function validateEnvironment() {
   for (var k = 0; k < requiredConfigKeys.length; k++) {
     var value = getConfigValue(requiredConfigKeys[k], '');
     if (value === '' || value == null) {
-      errors.push('Missing Data key: ' + requiredConfigKeys[k]);
+      errors.push('Missing setting: ' + requiredConfigKeys[k]);
     }
   }
 
   info.push('Configured sections: ' + configuredSections.length);
   info.push('Timezone: ' + getAppTimezone());
+  info.push('Settings storage: Document Properties');
+  if (hasLegacyDataSheet()) {
+    warnings.push('Legacy Data sheet is still present. It is no longer the primary config source.');
+  }
 
   var reportParts = [];
   reportParts.push('Errors: ' + errors.length);

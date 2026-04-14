@@ -6,7 +6,12 @@ import { describe, expect, test } from '@jest/globals';
 function loadYellowSheetLogic() {
   const filePath = path.resolve(process.cwd(), 'src', 'YellowSheetLogic.js');
   const source = readFileSync(filePath, 'utf8');
-  const context = {};
+  const context = {
+    isCompleteStatusValue(value) {
+      const normalized = String(value || '').trim();
+      return normalized === 'Completed' || normalized === 'Complete';
+    },
+  };
   vm.createContext(context);
   vm.runInContext(source, context);
   return context;
@@ -17,7 +22,7 @@ describe('YellowSheetLogic', () => {
     const logic = loadYellowSheetLogic();
 
     expect(
-      logic.getYellowSubmissionStatus('Complete', { pending: 'Pending', complete: 'Complete' })
+      logic.getYellowSubmissionStatus('Complete', { pending: 'Pending', complete: 'Completed' })
     ).toBe('Pending');
   });
 

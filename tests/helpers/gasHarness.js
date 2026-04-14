@@ -230,6 +230,7 @@ function formatDate(date, pattern) {
 
 export function createGasTestContext(initialSheets) {
   const spreadsheet = new MockSpreadsheet(initialSheets);
+  const documentProperties = {};
   const context = {
     console,
     SpreadsheetApp: {
@@ -273,10 +274,25 @@ export function createGasTestContext(initialSheets) {
         return formatDate(date, pattern);
       },
     },
+    PropertiesService: {
+      getDocumentProperties() {
+        return {
+          getProperties() {
+            return { ...documentProperties };
+          },
+          setProperties(values) {
+            Object.assign(documentProperties, values);
+          },
+          deleteProperty(key) {
+            delete documentProperties[key];
+          },
+        };
+      },
+    },
   };
 
   vm.createContext(context);
-  return { context, spreadsheet, MockSheet };
+  return { context, spreadsheet, MockSheet, documentProperties };
 }
 
 export function loadGasScripts(context, scriptPaths) {

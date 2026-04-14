@@ -17,7 +17,7 @@ describe('PinkSheetLogic', () => {
     pending: 'Pending',
     approved: 'Approved',
     denied: 'Denied',
-    complete: 'Complete',
+    complete: 'Completed',
   };
 
   test('approved rows complete only when the date exists', () => {
@@ -26,7 +26,7 @@ describe('PinkSheetLogic', () => {
     expect(logic.determinePinkSheetAction('Approved', true, statuses)).toEqual({
       writeAttendance: true,
       writeNote: true,
-      nextStatus: 'Complete',
+      nextStatus: 'Completed',
     });
 
     expect(logic.determinePinkSheetAction('Approved', false, statuses)).toEqual({
@@ -42,7 +42,7 @@ describe('PinkSheetLogic', () => {
     expect(logic.determinePinkSheetAction('Denied', true, statuses)).toEqual({
       writeAttendance: false,
       writeNote: true,
-      nextStatus: 'Complete',
+      nextStatus: 'Completed',
     });
 
     expect(logic.determinePinkSheetAction('Denied', false, statuses)).toEqual({
@@ -52,12 +52,18 @@ describe('PinkSheetLogic', () => {
     });
   });
 
-  test('pending rows never change attendance and remain pending', () => {
+  test('pending rows auto-complete when the date exists and otherwise remain pending', () => {
     const logic = loadPinkSheetLogic();
 
     expect(logic.determinePinkSheetAction('Pending', true, statuses)).toEqual({
-      writeAttendance: false,
+      writeAttendance: true,
       writeNote: true,
+      nextStatus: 'Completed',
+    });
+
+    expect(logic.determinePinkSheetAction('Pending', false, statuses)).toEqual({
+      writeAttendance: false,
+      writeNote: false,
       nextStatus: 'Pending',
     });
   });

@@ -28,9 +28,9 @@ function determinePinkSheetAction(statusValue, hasMatchingDate, statuses) {
 
   if (normalized === statuses.pending) {
     return {
-      writeAttendance: false,
+      writeAttendance: hasMatchingDate,
       writeNote: hasMatchingDate,
-      nextStatus: statuses.pending,
+      nextStatus: hasMatchingDate ? statuses.complete : statuses.pending,
     };
   }
 

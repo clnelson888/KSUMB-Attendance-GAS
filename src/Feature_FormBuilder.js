@@ -54,7 +54,7 @@ function buildAllForms() {
   var roster = _getRosterData();
 
   ss.toast('Building Pink Sheet form…', 'Form Builder', -1);
-  var pink = _buildPinkForm(roster.allNames);
+  var pink = _buildPinkForm(roster.namesBySection);
   props.setProperty(_PROP_PINK, pink.getId());
 
   ss.toast('Building Late Check-In form…', 'Form Builder', -1);
@@ -62,7 +62,7 @@ function buildAllForms() {
   props.setProperty(_PROP_LATE, late.getId());
 
   ss.toast('Building Yellow Sheet form…', 'Form Builder', -1);
-  var yellow = _buildYellowForm(roster.allNames);
+  var yellow = _buildYellowForm(roster.namesBySection);
   props.setProperty(_PROP_YELLOW, yellow.getId());
 
   // Install per-form triggers now that IDs are saved
@@ -107,7 +107,7 @@ function logFormUrls() {
  * @param {string[]} allNames  Sorted active-member full names.
  * @returns {GoogleAppsScript.Forms.Form}
  */
-function _buildPinkForm(allNames) {
+function _buildPinkForm(namesBySection) {
   var sectionTabs = getConfiguredSectionTabs();
   var form = FormApp.create('KSUMB Pink Sheet Request');
   form.setDescription(
@@ -117,23 +117,24 @@ function _buildPinkForm(allNames) {
   form.setCollectEmail(false);
   form.setLimitOneResponsePerUser(false);
 
-  var nameItem = form.addListItem();
-  nameItem.setTitle('Your Full Name').setRequired(true);
-  if (allNames.length > 0) nameItem.setChoiceValues(allNames);
+  var sectionQuestion = _addSectionQuestion(form);
+  var pageMap = {};
+  for (var i = 0; i < sectionTabs.length; i++) {
+    var section = sectionTabs[i];
+    pageMap[section] = form.addPageBreakItem();
+    _addSectionPage(form, section, namesBySection[section] || [], pageMap[section], function(sectionForm) {
+      var ensembleItem = sectionForm.addListItem();
+      ensembleItem.setTitle('Ensemble').setRequired(true);
+      ensembleItem.setChoiceValues(FORM_CONFIG.ENSEMBLE_CHOICES);
 
-  var ensembleItem = form.addListItem();
-  ensembleItem.setTitle('Ensemble').setRequired(true);
-  ensembleItem.setChoiceValues(FORM_CONFIG.ENSEMBLE_CHOICES);
+      var dateItem = sectionForm.addDateItem();
+      dateItem.setTitle('Date of Absence').setRequired(true);
 
-  var sectionItem = form.addListItem();
-  sectionItem.setTitle('Your Section').setRequired(true);
-  sectionItem.setChoiceValues(sectionTabs);
-
-  var dateItem = form.addDateItem();
-  dateItem.setTitle('Date of Absence').setRequired(true);
-
-  var reasonItem = form.addParagraphTextItem();
-  reasonItem.setTitle('Reason').setRequired(true);
+      var reasonItem = sectionForm.addParagraphTextItem();
+      reasonItem.setTitle('Reason').setRequired(true);
+    });
+  }
+  _setSectionChoices(sectionQuestion, sectionTabs, pageMap);
 
   return form;
 }
@@ -164,38 +165,21 @@ function _buildLateForm(namesBySection) {
   form.setLimitOneResponsePerUser(false);
 
   // First question — section picker; choices will be set after pages are created
-  var sectionQuestion = form.addMultipleChoiceItem();
-  sectionQuestion.setTitle('What is your section?').setRequired(true);
-
-  // Create one page per section, collect page references for routing
-  var sectionPages = {};
+  var sectionQuestion = _addSectionQuestion(form);
+  var pageMap = {};
   for (var t = 0; t < sectionTabs.length; t++) {
     var section = sectionTabs[t];
+    pageMap[section] = form.addPageBreakItem();
+    _addSectionPage(form, section, namesBySection[section] || [], pageMap[section], function(sectionForm) {
+      var reasonItem = sectionForm.addMultipleChoiceItem();
+      reasonItem.setTitle('Reason for late arrival').setRequired(true);
+      reasonItem.setChoiceValues(lateReasons);
 
-    var page = form.addPageBreakItem();
-    page.setTitle(section + ' \u2014 Select Your Name'); // em dash matches inspectFormQuestions output
-
-    var nameItem = form.addListItem();
-    nameItem.setTitle('Your Name').setRequired(true);
-    var sectionNames = namesBySection[section] || [];
-    nameItem.setChoiceValues(sectionNames.length > 0 ? sectionNames : ['(no members)']);
-
-    var reasonItem = form.addMultipleChoiceItem();
-    reasonItem.setTitle('Reason for late arrival').setRequired(true);
-    reasonItem.setChoiceValues(lateReasons);
-
-    var otherItem = form.addTextItem();
-    otherItem.setTitle('If \u201cOther\u201d, please explain:'); // curly quotes
-
-    sectionPages[section] = page;
+      var otherItem = sectionForm.addTextItem();
+      otherItem.setTitle('If \u201cOther\u201d, please explain:');
+    });
   }
-
-  // Wire routing: each section choice navigates to that section's page
-  var choices = [];
-  for (var s = 0; s < sectionTabs.length; s++) {
-    choices.push(sectionQuestion.createChoice(sectionTabs[s], sectionPages[sectionTabs[s]]));
-  }
-  sectionQuestion.setChoices(choices);
+  _setSectionChoices(sectionQuestion, sectionTabs, pageMap);
 
   return form;
 }
@@ -215,7 +199,7 @@ function _buildLateForm(namesBySection) {
  * @param {string[]} allNames  Sorted active-member full names.
  * @returns {GoogleAppsScript.Forms.Form}
  */
-function _buildYellowForm(allNames) {
+function _buildYellowForm(namesBySection) {
   var sectionTabs = getConfiguredSectionTabs();
   var form = FormApp.create('KSUMB Yellow Sheet (Class Conflict)');
   form.setDescription(
@@ -226,30 +210,31 @@ function _buildYellowForm(allNames) {
   form.setLimitOneResponsePerUser(false);
   form.setAllowResponseEdits(true);
 
-  var nameItem = form.addListItem();
-  nameItem.setTitle('Your Full Name').setRequired(true);
-  if (allNames.length > 0) nameItem.setChoiceValues(allNames);
+  var sectionQuestion = _addSectionQuestion(form);
+  var pageMap = {};
+  for (var i = 0; i < sectionTabs.length; i++) {
+    var section = sectionTabs[i];
+    pageMap[section] = form.addPageBreakItem();
+    _addSectionPage(form, section, namesBySection[section] || [], pageMap[section], function(sectionForm) {
+      var ensembleItem = sectionForm.addListItem();
+      ensembleItem.setTitle('Ensemble').setRequired(true);
+      ensembleItem.setChoiceValues(FORM_CONFIG.ENSEMBLE_CHOICES);
 
-  var ensembleItem = form.addListItem();
-  ensembleItem.setTitle('Ensemble').setRequired(true);
-  ensembleItem.setChoiceValues(FORM_CONFIG.ENSEMBLE_CHOICES);
+      var daysItem = sectionForm.addCheckboxItem();
+      daysItem.setTitle('Conflict Days').setRequired(true);
+      daysItem.setChoiceValues(FORM_CONFIG.CONFLICT_DAYS);
 
-  var sectionItem = form.addListItem();
-  sectionItem.setTitle('Your Section').setRequired(true);
-  sectionItem.setChoiceValues(sectionTabs);
+      var startItem = sectionForm.addTimeItem();
+      startItem.setTitle('Conflict Start Time').setRequired(true);
 
-  var daysItem = form.addCheckboxItem();
-  daysItem.setTitle('Conflict Days').setRequired(true);
-  daysItem.setChoiceValues(FORM_CONFIG.CONFLICT_DAYS);
+      var endItem = sectionForm.addTimeItem();
+      endItem.setTitle('Conflict End Time').setRequired(true);
 
-  var startItem = form.addTimeItem();
-  startItem.setTitle('Conflict Start Time').setRequired(true);
-
-  var endItem = form.addTimeItem();
-  endItem.setTitle('Conflict End Time').setRequired(true);
-
-  var notesItem = form.addParagraphTextItem();
-  notesItem.setTitle('Notes'); // optional
+      var notesItem = sectionForm.addParagraphTextItem();
+      notesItem.setTitle('Notes');
+    });
+  }
+  _setSectionChoices(sectionQuestion, sectionTabs, pageMap);
 
   return form;
 }
@@ -263,6 +248,45 @@ function _buildYellowForm(allNames) {
  * that choice values be unique within a single question.
  * @returns {{ allNames: string[], namesBySection: Object.<string, string[]> }}
  */
+function _addSectionQuestion(form) {
+  var sectionQuestion = form.addMultipleChoiceItem();
+  sectionQuestion.setTitle(FORM_SECTION_QUESTION_TITLE).setRequired(true);
+  return sectionQuestion;
+}
+
+function _setSectionChoices(sectionQuestion, sectionTabs, pageMap) {
+  var choices = [];
+  for (var i = 0; i < sectionTabs.length; i++) {
+    var section = sectionTabs[i];
+    choices.push(sectionQuestion.createChoice(section, pageMap[section]));
+  }
+  sectionQuestion.setChoices(choices);
+}
+
+function _addSectionPage(form, section, sectionNames, pageItem, addFields) {
+  pageItem.setTitle(buildSectionPageTitle(section));
+  pageItem.setGoToPage(FormApp.PageNavigationType.SUBMIT);
+
+  var nameItem = form.addListItem();
+  nameItem.setTitle(FORM_NAME_LIST_TITLE);
+  nameItem.setHelpText(FORM_NAME_LIST_HELP_TEXT);
+  nameItem.setChoiceValues(sectionNames.length > 0 ? sectionNames : ['(no members)']);
+
+  var manualNameItem = form.addTextItem();
+  manualNameItem.setTitle(FORM_MANUAL_NAME_TITLE);
+  manualNameItem.setHelpText(FORM_MANUAL_NAME_HELP_TEXT);
+  manualNameItem.setValidation(_createManualNameValidation());
+
+  addFields(form);
+}
+
+function _createManualNameValidation() {
+  return FormApp.createTextValidation()
+    .requireTextMatchesPattern('^\\s*[^,]+,\\s*[^,].*$')
+    .setHelpText(FORM_MANUAL_NAME_HELP_TEXT)
+    .build();
+}
+
 function _getRosterData() {
   var data = getTableData('Database');
   if (data.length < 2) {

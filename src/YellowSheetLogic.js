@@ -7,8 +7,7 @@
  * @returns {string}
  */
 function getYellowSubmissionStatus(previousStatus, statuses) {
-  var normalized = String(previousStatus || '').trim();
-  if (normalized === statuses.complete) {
+  if (isCompleteStatusValue(previousStatus)) {
     return statuses.pending;
   }
   return statuses.pending;

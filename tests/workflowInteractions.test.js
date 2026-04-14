@@ -11,7 +11,7 @@ function buildDataSheet() {
     ['STATUS_PENDING', 'Pending'],
     ['STATUS_APPROVED', 'Approved'],
     ['STATUS_DENIED', 'Denied'],
-    ['STATUS_COMPLETE', 'Complete'],
+    ['STATUS_COMPLETE', 'Completed'],
     ['ATTENDANCE_PRESENT', 'Present'],
     ['ATTENDANCE_TARDY', 'Tardy'],
     ['ATTENDANCE_ABSENT', 'Absent'],
@@ -67,7 +67,7 @@ describe('Workflow interactions', () => {
 
     expect(spreadsheet.getSheetByName('Trumpet').getRange(2, 2).getValue()).toBe('Present');
     expect(spreadsheet.getSheetByName('Trumpet').getRange(2, 2).getNote()).toContain('Reason: Class');
-    expect(spreadsheet.getSheetByName('Late Check-Ins').getRange(2, 8).getValue()).toBe('Complete');
+    expect(spreadsheet.getSheetByName('Late Check-Ins').getRange(2, 8).getValue()).toBe('Completed');
   });
 
   test('Late Check-In stays pending when the rehearsal date does not exist yet', () => {
@@ -99,7 +99,7 @@ describe('Workflow interactions', () => {
     expect(spreadsheet.getSheetByName('Trumpet').getRange(2, 2).getValue()).toBe('Absent');
   });
 
-  test('Pink Sheet approved row updates attendance and note, but stays approved when date is missing', () => {
+  test('Pink Sheet pending row auto-processes when date exists and stays pending when date is missing', () => {
     const { context, spreadsheet } = createGasTestContext({
       Data: buildDataSheet(),
       Tuba: new MockSheet('Tuba', [
@@ -109,18 +109,18 @@ describe('Workflow interactions', () => {
     });
     loadCoreWorkflowScripts(context);
 
-    const approvedOutcome = context.processSinglePinkSheet(spreadsheet, {
+    const completedOutcome = context.processSinglePinkSheet(spreadsheet, {
       submissionId: 'pink-1',
       submittedAt: new Date(2026, 3, 10, 14, 0, 0),
       name: 'Smith, Sam',
       section: 'Tuba',
       date: new Date(2026, 3, 14, 0, 0, 0),
-      status: 'Approved',
+      status: 'Pending',
     });
 
-    expect(approvedOutcome.statusValue).toBe('Complete');
+    expect(completedOutcome.statusValue).toBe('Completed');
     expect(spreadsheet.getSheetByName('Tuba').getRange(2, 2).getValue()).toBe('Excused');
-    expect(spreadsheet.getSheetByName('Tuba').getRange(2, 2).getNote()).toContain('Status: Approved');
+    expect(spreadsheet.getSheetByName('Tuba').getRange(2, 2).getNote()).toContain('Status: Completed');
 
     const missingDateOutcome = context.processSinglePinkSheet(spreadsheet, {
       submissionId: 'pink-2',
@@ -128,10 +128,10 @@ describe('Workflow interactions', () => {
       name: 'Smith, Sam',
       section: 'Tuba',
       date: new Date(2026, 3, 15, 0, 0, 0),
-      status: 'Approved',
+      status: 'Pending',
     });
 
-    expect(missingDateOutcome.statusValue).toBe('Approved');
+    expect(missingDateOutcome.statusValue).toBe('Pending');
   });
 
   test('Yellow Sheet upsert updates an existing complete row and resets note to pending', () => {
