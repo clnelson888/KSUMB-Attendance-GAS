@@ -6,7 +6,9 @@
  */
 function isRosterMemberActive(value) {
   if (value === true) return true;
-  var normalized = String(value || '').trim().toLowerCase();
+  var normalized = String(value || '')
+    .trim()
+    .toLowerCase();
   return normalized === 'true' || normalized === 'yes' || normalized === 'active';
 }
 

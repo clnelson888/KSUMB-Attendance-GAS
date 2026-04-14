@@ -49,5 +49,8 @@ function determinePinkSheetAction(statusValue, hasMatchingDate, statuses) {
  * @returns {string}
  */
 function buildPinkSheetNoteText(submittedAtLabel, statusValue) {
-  return ['Pink Sheet submitted: ' + String(submittedAtLabel || '').trim(), 'Status: ' + String(statusValue || '').trim()].join('\n');
+  return [
+    'Pink Sheet submitted: ' + String(submittedAtLabel || '').trim(),
+    'Status: ' + String(statusValue || '').trim(),
+  ].join('\n');
 }

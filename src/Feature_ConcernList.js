@@ -76,9 +76,7 @@ function configureConcernListSheet(concernSheet, dateOptions, presentValue, sect
     concernSheet.getRange(1, 2).setValue('');
   }
 
-  concernSheet
-    .getRange(4, 1)
-    .setFormula(buildConcernListFormula(sectionTabs, presentValue));
+  concernSheet.getRange(4, 1).setFormula(buildConcernListFormula(sectionTabs, presentValue));
 
   concernSheet.autoResizeColumns(1, 3);
 }

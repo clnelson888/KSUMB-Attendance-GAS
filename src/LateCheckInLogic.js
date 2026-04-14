@@ -34,13 +34,7 @@ function parseLateThresholdMinutes(rawValue, fallbackMinutes) {
  * @param {string} tardyValue
  * @returns {string}
  */
-function determineLateAttendanceStatus(
-  arrivalDate,
-  rehearsalStartDate,
-  thresholdMinutes,
-  presentValue,
-  tardyValue
-) {
+function determineLateAttendanceStatus(arrivalDate, rehearsalStartDate, thresholdMinutes, presentValue, tardyValue) {
   if (!isValidDateLike(arrivalDate)) {
     throw new Error('Arrival date is invalid.');
   }
@@ -65,12 +59,7 @@ function canLateCheckInOverwriteAttendance(currentValue, attendanceValues) {
   var normalized = String(currentValue || '').trim();
   if (!normalized) return true;
 
-  var allowed = [
-    attendanceValues.present,
-    attendanceValues.tardy,
-    attendanceValues.absent,
-    attendanceValues.excused,
-  ];
+  var allowed = [attendanceValues.present, attendanceValues.tardy, attendanceValues.absent, attendanceValues.excused];
 
   return allowed.indexOf(normalized) !== -1;
 }

@@ -46,7 +46,5 @@ function writeTableData(sheetName, data, startRow, startCol) {
   startCol = startCol || 1;
   if (!data || data.length === 0) return;
   const sheet = getSheet(sheetName);
-  sheet
-    .getRange(startRow, startCol, data.length, data[0].length)
-    .setValues(data);
+  sheet.getRange(startRow, startCol, data.length, data[0].length).setValues(data);
 }

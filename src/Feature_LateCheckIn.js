@@ -89,9 +89,7 @@ function writeLateCheckInOutcome(lateSheet, headerMap, rowIndex, outcome) {
     lateSheet.getRange(rowIndex, headerMap.status + 1).setValue(outcome.statusValue);
   }
   if (headerMap.processedAt !== -1) {
-    lateSheet
-      .getRange(rowIndex, headerMap.processedAt + 1)
-      .setValue(outcome.processedAt || '');
+    lateSheet.getRange(rowIndex, headerMap.processedAt + 1).setValue(outcome.processedAt || '');
   }
   if (headerMap.error !== -1) {
     lateSheet.getRange(rowIndex, headerMap.error + 1).setValue(outcome.errorMessage || '');
