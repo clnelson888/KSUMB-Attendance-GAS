@@ -232,6 +232,7 @@ function _buildYellowForm(namesBySection) {
 
       var notesItem = sectionForm.addParagraphTextItem();
       notesItem.setTitle('Notes');
+      notesItem.setHelpText('Include the class number and professor (e.g., "MUSIC 285 — Dr. Smith").');
     });
   }
   _setSectionChoices(sectionQuestion, sectionTabs, pageMap);
@@ -288,36 +289,55 @@ function _createManualNameValidation() {
 }
 
 function _getRosterData() {
-  var data = getTableData('Database');
+  var data = getTableData('Database', {
+    namedRange: 'DATABASE_ROSTER',
+    expectedHeaders: ['Full Name', 'Section'],
+  });
   if (data.length < 2) {
     console.warn('_getRosterData: Database tab is empty or has no data rows.');
-    return { allNames: [], namesBySection: {} };
+    return { allNames: [], namesBySection: {}, ignoredCount: 0 };
   }
 
   var headers = data[0];
   var colFullName = headers.indexOf('Full Name');
   var colSection = headers.indexOf('Section');
+  var colActive = headers.indexOf('Active');
 
   if (colFullName === -1 || colSection === -1) {
     throw new Error('Database tab missing "Full Name" or "Section" column. Found: ' + JSON.stringify(headers));
   }
 
+  var seenPairs = {};
   var seenNames = {};
   var allNames = [];
   var namesBySection = {};
+  var ignoredCount = 0;
 
   for (var i = 1; i < data.length; i++) {
     var fullName = String(data[i][colFullName]).trim();
     var section = String(data[i][colSection]).trim();
-    if (!fullName) continue;
-
-    // Deduplicate across all names (prevents "duplicate choice values" error)
-    if (seenNames[fullName]) {
-      console.warn('_getRosterData: duplicate name skipped — "' + fullName + '"');
+    if (!fullName || !section) {
+      ignoredCount++;
       continue;
     }
-    seenNames[fullName] = true;
-    allNames.push(fullName);
+
+    if (colActive !== -1 && !isRosterMemberActive(data[i][colActive])) {
+      ignoredCount++;
+      continue;
+    }
+
+    var pairKey = section + '||' + fullName;
+    if (seenPairs[pairKey]) {
+      console.warn('_getRosterData: duplicate (section, name) skipped — "' + section + ' | ' + fullName + '"');
+      ignoredCount++;
+      continue;
+    }
+    seenPairs[pairKey] = true;
+
+    if (!seenNames[fullName]) {
+      seenNames[fullName] = true;
+      allNames.push(fullName);
+    }
 
     if (!namesBySection[section]) namesBySection[section] = [];
     namesBySection[section].push(fullName);
@@ -329,8 +349,16 @@ function _getRosterData() {
     namesBySection[sections[s]].sort();
   }
 
-  console.log('_getRosterData: loaded ' + allNames.length + ' member(s) from Database.');
-  return { allNames: allNames, namesBySection: namesBySection };
+  console.log(
+    '_getRosterData: loaded ' +
+      allNames.length +
+      ' unique name(s) across ' +
+      sections.length +
+      ' section(s). Ignored ' +
+      ignoredCount +
+      ' row(s).'
+  );
+  return { allNames: allNames, namesBySection: namesBySection, ignoredCount: ignoredCount };
 }
 
 /**
@@ -338,7 +366,10 @@ function _getRosterData() {
  * Run from the Apps Script editor to verify what _getRosterData sees.
  */
 function inspectDatabase() {
-  var data = getTableData('Database');
+  var data = getTableData('Database', {
+    namedRange: 'DATABASE_ROSTER',
+    expectedHeaders: ['Full Name', 'Section'],
+  });
   console.log('Row count (including header): ' + data.length);
   if (data.length === 0) {
     console.log('Database tab is completely empty.');

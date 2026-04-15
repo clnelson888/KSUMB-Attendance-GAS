@@ -38,5 +38,24 @@ describe('YellowSheetLogic', () => {
     const logic = loadYellowSheetLogic();
 
     expect(logic.getPendingYellowSheetNoteText()).toBe('Pending Yellow Sheet');
+    expect(logic.getPendingYellowSheetNoteText('4/14/2026 9:00 AM')).toBe(
+      'Pending Yellow Sheet\nSubmitted: 4/14/2026 9:00 AM'
+    );
+  });
+
+  test('approved note text appends submitted and approved timestamps when provided', () => {
+    const logic = loadYellowSheetLogic();
+
+    expect(
+      logic.buildYellowSheetApprovedNote(
+        'Tuesday',
+        '1:30 PM',
+        '2:20 PM',
+        '4/14/2026 9:00 AM',
+        '4/15/2026 10:15 AM'
+      )
+    ).toBe(
+      'Class conflict: Tuesday 1:30 PM-2:20 PM\nSubmitted: 4/14/2026 9:00 AM\nApproved: 4/15/2026 10:15 AM'
+    );
   });
 });

@@ -19,24 +19,35 @@ function getYellowSubmissionStatus(previousStatus, statuses) {
  * @param {string} days
  * @param {string} startLabel
  * @param {string} endLabel
+ * @param {string} [submittedAtLabel]
+ * @param {string} [approvedAtLabel]
  * @returns {string}
  */
-function buildYellowSheetApprovedNote(days, startLabel, endLabel) {
-  var note = 'Class conflict: ' + String(days || '').trim();
+function buildYellowSheetApprovedNote(days, startLabel, endLabel, submittedAtLabel, approvedAtLabel) {
+  var header = 'Class conflict: ' + String(days || '').trim();
   var start = String(startLabel || '').trim();
   var end = String(endLabel || '').trim();
   if (start && end) {
-    note += ' ' + start + '-' + end;
+    header += ' ' + start + '-' + end;
   }
-  return note;
+
+  var lines = [header];
+  var submitted = String(submittedAtLabel || '').trim();
+  var approved = String(approvedAtLabel || '').trim();
+  if (submitted) lines.push('Submitted: ' + submitted);
+  if (approved) lines.push('Approved: ' + approved);
+  return lines.join('\n');
 }
 
 /**
- * Returns the note text for a previously approved Yellow Sheet that has been
- * edited and must be re-approved.
+ * Returns the note text for a pending / previously approved Yellow Sheet
+ * whose submission has not yet been re-approved.
  *
+ * @param {string} [submittedAtLabel]
  * @returns {string}
  */
-function getPendingYellowSheetNoteText() {
-  return 'Pending Yellow Sheet';
+function getPendingYellowSheetNoteText(submittedAtLabel) {
+  var submitted = String(submittedAtLabel || '').trim();
+  if (!submitted) return 'Pending Yellow Sheet';
+  return 'Pending Yellow Sheet\nSubmitted: ' + submitted;
 }

@@ -52,13 +52,13 @@ describe('PinkSheetLogic', () => {
     });
   });
 
-  test('pending rows auto-complete when the date exists and otherwise remain pending', () => {
+  test('pending rows write a note only and stay pending', () => {
     const logic = loadPinkSheetLogic();
 
     expect(logic.determinePinkSheetAction('Pending', true, statuses)).toEqual({
-      writeAttendance: true,
+      writeAttendance: false,
       writeNote: true,
-      nextStatus: 'Completed',
+      nextStatus: 'Pending',
     });
 
     expect(logic.determinePinkSheetAction('Pending', false, statuses)).toEqual({
@@ -68,11 +68,32 @@ describe('PinkSheetLogic', () => {
     });
   });
 
-  test('buildPinkSheetNoteText excludes the reason and keeps only timestamp plus status', () => {
+  test('buildPinkSheetNoteText renders pending, approved, and denied variants', () => {
     const logic = loadPinkSheetLogic();
 
-    expect(logic.buildPinkSheetNoteText('4/14/2026 2:45 PM', 'Approved')).toBe(
-      'Pink Sheet submitted: 4/14/2026 2:45 PM\nStatus: Approved'
+    expect(
+      logic.buildPinkSheetNoteText({
+        statusValue: 'Pending',
+        submittedAtLabel: '4/14/2026 2:45 PM',
+      })
+    ).toBe('Pink Sheet pending (not yet approved)\nSubmitted: 4/14/2026 2:45 PM');
+
+    expect(
+      logic.buildPinkSheetNoteText({
+        statusValue: 'Approved',
+        submittedAtLabel: '4/14/2026 2:45 PM',
+        approvedAtLabel: '4/15/2026 9:00 AM',
+      })
+    ).toBe(
+      'Pink Sheet approved\nSubmitted: 4/14/2026 2:45 PM\nApproved: 4/15/2026 9:00 AM'
     );
+
+    expect(
+      logic.buildPinkSheetNoteText({
+        statusValue: 'Denied',
+        submittedAtLabel: '4/14/2026 2:45 PM',
+        deniedAtLabel: '4/15/2026 9:00 AM',
+      })
+    ).toBe('Pink Sheet denied\nSubmitted: 4/14/2026 2:45 PM\nDenied: 4/15/2026 9:00 AM');
   });
 });

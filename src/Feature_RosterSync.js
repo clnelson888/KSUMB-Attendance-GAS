@@ -1,14 +1,18 @@
 /** @OnlyCurrentDoc */
 
 /**
- * Reads the Database tab and returns active members grouped by section.
+ * Reads the Database tab and returns active members grouped by section,
+ * plus a count of rows ignored (inactive, blank, or duplicate).
  *
- * @returns {Object.<string, string[]>}
+ * @returns {{ bySection: Object.<string, string[]>, ignoredCount: number }}
  */
 function getDatabaseRosterBySection() {
-  var data = getTableData('Database');
+  var data = getTableData('Database', {
+    namedRange: 'DATABASE_ROSTER',
+    expectedHeaders: ['Full Name', 'Section', 'Active'],
+  });
   if (data.length < 2) {
-    return {};
+    return { bySection: {}, ignoredCount: 0 };
   }
 
   var headers = data[0];
@@ -17,24 +21,37 @@ function getDatabaseRosterBySection() {
   var colActive = headers.indexOf('Active');
 
   if (colFullName === -1 || colSection === -1 || colActive === -1) {
-    throw new Error('Database tab must contain Full Name, Section, and Active columns.');
+    throw new Error(
+      'Database tab missing columns. Expected: Full Name, Section, Active. Got: ' + JSON.stringify(headers)
+    );
   }
 
   var members = [];
+  var totalRows = 0;
   for (var i = 1; i < data.length; i++) {
+    var fullName = String(data[i][colFullName] || '').trim();
+    var section = String(data[i][colSection] || '').trim();
+    if (!fullName && !section) continue;
+    totalRows++;
     members.push({
-      fullName: data[i][colFullName],
-      section: data[i][colSection],
+      fullName: fullName,
+      section: section,
       active: data[i][colActive],
     });
   }
 
-  return groupActiveRosterMembersBySection(members);
+  var bySection = groupActiveRosterMembersBySection(members);
+  var kept = 0;
+  var sectionKeys = Object.keys(bySection);
+  for (var s = 0; s < sectionKeys.length; s++) kept += bySection[sectionKeys[s]].length;
+
+  return { bySection: bySection, ignoredCount: Math.max(totalRows - kept, 0) };
 }
 
 /**
- * Collects existing section rows and notes by student name so attendance
- * history can move with the student during roster sync.
+ * Collects existing section rows and notes keyed by "section||fullName" so
+ * attendance history moves with the student during roster sync even when
+ * the same name appears in multiple sections.
  *
  * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ss
  * @returns {Object.<string, {values: Array, notes: Array}>}
@@ -44,7 +61,8 @@ function collectExistingSectionRecords(ss) {
   var sectionTabs = getConfiguredSectionTabs();
 
   for (var i = 0; i < sectionTabs.length; i++) {
-    var sheet = ss.getSheetByName(sectionTabs[i]);
+    var sectionName = sectionTabs[i];
+    var sheet = ss.getSheetByName(sectionName);
     if (!sheet) continue;
 
     var lastRow = sheet.getLastRow();
@@ -56,7 +74,7 @@ function collectExistingSectionRecords(ss) {
     for (var r = 0; r < values.length; r++) {
       var fullName = String(values[r][0] || '').trim();
       if (!fullName) continue;
-      records[fullName] = {
+      records[sectionName + '||' + fullName] = {
         values: values[r].slice(),
         notes: notes[r].slice(),
       };
@@ -69,14 +87,17 @@ function collectExistingSectionRecords(ss) {
 /**
  * Builds the new values/notes arrays for a section tab.
  *
+ * @param {string} sectionName
  * @param {string[]} memberNames
  * @param {number} columnCount
  * @param {Object.<string, {values: Array, notes: Array}>} existingRecords
- * @returns {{values: Array[], notes: Array[]}}
+ * @returns {{values: Array[], notes: Array[], kept: number, added: number}}
  */
-function buildSectionSyncRows(memberNames, columnCount, existingRecords) {
+function buildSectionSyncRows(sectionName, memberNames, columnCount, existingRecords) {
   var rows = [];
   var notes = [];
+  var kept = 0;
+  var added = 0;
 
   for (var i = 0; i < memberNames.length; i++) {
     var fullName = memberNames[i];
@@ -88,7 +109,7 @@ function buildSectionSyncRows(memberNames, columnCount, existingRecords) {
     }
 
     valuesRow[0] = fullName;
-    var existing = existingRecords[fullName];
+    var existing = existingRecords[sectionName + '||' + fullName];
     if (existing) {
       for (var j = 0; j < Math.min(existing.values.length, columnCount); j++) {
         valuesRow[j] = existing.values[j];
@@ -97,13 +118,40 @@ function buildSectionSyncRows(memberNames, columnCount, existingRecords) {
       for (var k = 0; k < Math.min(existing.notes.length, columnCount); k++) {
         notesRow[k] = existing.notes[k];
       }
+      kept++;
+    } else {
+      added++;
     }
 
     rows.push(valuesRow);
     notes.push(notesRow);
   }
 
-  return { values: rows, notes: notes };
+  return { values: rows, notes: notes, kept: kept, added: added };
+}
+
+/**
+ * Counts names present on a section tab before sync that are not in the
+ * new member list (i.e. were removed by this sync).
+ *
+ * @param {string} sectionName
+ * @param {string[]} memberNames
+ * @param {Object.<string, {values: Array, notes: Array}>} existingRecords
+ * @returns {number}
+ */
+function countRemovedFromSection(sectionName, memberNames, existingRecords) {
+  var memberSet = {};
+  for (var i = 0; i < memberNames.length; i++) memberSet[memberNames[i]] = true;
+
+  var prefix = sectionName + '||';
+  var removed = 0;
+  var keys = Object.keys(existingRecords);
+  for (var k = 0; k < keys.length; k++) {
+    if (keys[k].indexOf(prefix) !== 0) continue;
+    var priorName = keys[k].slice(prefix.length);
+    if (!memberSet[priorName]) removed++;
+  }
+  return removed;
 }
 
 /**
@@ -112,11 +160,13 @@ function buildSectionSyncRows(memberNames, columnCount, existingRecords) {
  */
 function syncRosterFromDatabase() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var rosterBySection = getDatabaseRosterBySection();
+  var roster = getDatabaseRosterBySection();
+  var rosterBySection = roster.bySection;
   var existingRecords = collectExistingSectionRecords(ss);
   var sectionTabs = getConfiguredSectionTabs();
   var lock = LockService.getScriptLock();
-  var summary = [];
+  var perSection = [];
+  var totals = { added: 0, updated: 0, deleted: 0, ignored: roster.ignoredCount };
 
   lock.waitLock(30000);
   try {
@@ -127,7 +177,8 @@ function syncRosterFromDatabase() {
 
       var lastCol = Math.max(sheet.getLastColumn(), 1);
       var memberNames = rosterBySection[sectionName] || [];
-      var sectionRows = buildSectionSyncRows(memberNames, lastCol, existingRecords);
+      var sectionRows = buildSectionSyncRows(sectionName, memberNames, lastCol, existingRecords);
+      var removed = countRemovedFromSection(sectionName, memberNames, existingRecords);
       var existingDataRowCount = Math.max(sheet.getLastRow() - 1, 0);
 
       if (existingDataRowCount > 0) {
@@ -139,7 +190,22 @@ function syncRosterFromDatabase() {
         sheet.getRange(2, 1, sectionRows.notes.length, lastCol).setNotes(sectionRows.notes);
       }
 
-      summary.push(sectionName + ': ' + memberNames.length + ' member(s)');
+      totals.added += sectionRows.added;
+      totals.updated += sectionRows.kept;
+      totals.deleted += removed;
+
+      perSection.push(
+        sectionName +
+          ': ' +
+          memberNames.length +
+          ' member(s) (+' +
+          sectionRows.added +
+          ', -' +
+          removed +
+          ', ' +
+          sectionRows.kept +
+          ' kept)'
+      );
     }
 
     SpreadsheetApp.flush();
@@ -149,6 +215,23 @@ function syncRosterFromDatabase() {
   }
 
   syncRosterToForms();
-  logSystemEvent('RosterSync', 'syncRosterFromDatabase', 'INFO', '', 'Roster sync completed.');
-  SpreadsheetApp.getUi().alert('Roster Sync', summary.join('\n'), SpreadsheetApp.getUi().ButtonSet.OK);
+
+  var headline =
+    'Roster sync: +' +
+    totals.added +
+    ' added, -' +
+    totals.deleted +
+    ' removed, ' +
+    totals.updated +
+    ' kept, ' +
+    totals.ignored +
+    ' ignored.';
+
+  logSystemEvent('RosterSync', 'syncRosterFromDatabase', 'INFO', '', headline);
+  SpreadsheetApp.getActiveSpreadsheet().toast(headline, 'Roster Sync');
+  SpreadsheetApp
+    .getUi()
+    .alert('Roster Sync', headline + '\n\n' + perSection.join('\n'), SpreadsheetApp.getUi().ButtonSet.OK);
+
+  return totals;
 }

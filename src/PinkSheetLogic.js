@@ -28,9 +28,9 @@ function determinePinkSheetAction(statusValue, hasMatchingDate, statuses) {
 
   if (normalized === statuses.pending) {
     return {
-      writeAttendance: hasMatchingDate,
+      writeAttendance: false,
       writeNote: hasMatchingDate,
-      nextStatus: hasMatchingDate ? statuses.complete : statuses.pending,
+      nextStatus: statuses.pending,
     };
   }
 
@@ -42,15 +42,34 @@ function determinePinkSheetAction(statusValue, hasMatchingDate, statuses) {
 }
 
 /**
- * Builds the FERPA-safe Pink Sheet note text.
+ * Builds the FERPA-safe Pink Sheet note text. Callers pre-format the
+ * timestamp labels (PinkSheetLogic stays free of GAS globals).
  *
- * @param {string} submittedAtLabel
- * @param {string} statusValue
+ * @param {{submittedAtLabel: string, statusValue: string, approvedAtLabel?: string, deniedAtLabel?: string}} parts
  * @returns {string}
  */
-function buildPinkSheetNoteText(submittedAtLabel, statusValue) {
-  return [
-    'Pink Sheet submitted: ' + String(submittedAtLabel || '').trim(),
-    'Status: ' + String(statusValue || '').trim(),
-  ].join('\n');
+function buildPinkSheetNoteText(parts) {
+  var p = parts || {};
+  var status = String(p.statusValue || '').trim();
+  var lower = status.toLowerCase();
+  var submittedLine = 'Submitted: ' + String(p.submittedAtLabel || '').trim();
+
+  if (lower === 'pending') {
+    return ['Pink Sheet pending (not yet approved)', submittedLine].join('\n');
+  }
+  if (lower === 'approved' || lower === 'completed' || lower === 'complete') {
+    return [
+      'Pink Sheet approved',
+      submittedLine,
+      'Approved: ' + String(p.approvedAtLabel || '').trim(),
+    ].join('\n');
+  }
+  if (lower === 'denied') {
+    return [
+      'Pink Sheet denied',
+      submittedLine,
+      'Denied: ' + String(p.deniedAtLabel || '').trim(),
+    ].join('\n');
+  }
+  return ['Pink Sheet ' + status, submittedLine].join('\n');
 }

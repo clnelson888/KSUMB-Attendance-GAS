@@ -13,6 +13,8 @@ const SYSTEM_SHEET_HEADERS = {
     'Date',
     'Reason',
     'Status',
+    'Approved At',
+    'Denied At',
     'Processed At',
     'Error',
   ],
@@ -157,6 +159,7 @@ function normalizeLegacyStatusValues(ss) {
  * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
  */
 function applyQueueStatusValidation(sheet) {
+  if (!sheet) return;
   var headerRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   var statusIndex = headerRow.indexOf('Status');
   if (statusIndex === -1) return;
@@ -173,9 +176,7 @@ function applyQueueStatusValidation(sheet) {
     ];
   }
 
-  var rule = SpreadsheetApp.newDataValidation().requireValueInList(statuses, true).setAllowInvalid(false).build();
-  var rowCount = Math.max(sheet.getMaxRows() - 1, 1);
-  sheet.getRange(2, statusIndex + 1, rowCount, 1).setDataValidation(rule);
+  applyStatusValidationToColumn(sheet, statusIndex, statuses);
 }
 
 /**

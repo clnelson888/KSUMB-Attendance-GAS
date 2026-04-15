@@ -99,7 +99,7 @@ describe('Workflow interactions', () => {
     expect(spreadsheet.getSheetByName('Trumpet').getRange(2, 2).getValue()).toBe('Absent');
   });
 
-  test('Pink Sheet pending row auto-processes when date exists and stays pending when date is missing', () => {
+  test('Pink Sheet pending row writes a note only and stays pending when the date exists', () => {
     const { context, spreadsheet } = createGasTestContext({
       Data: buildDataSheet(),
       Tuba: new MockSheet('Tuba', [
@@ -109,7 +109,7 @@ describe('Workflow interactions', () => {
     });
     loadCoreWorkflowScripts(context);
 
-    const completedOutcome = context.processSinglePinkSheet(spreadsheet, {
+    const pendingOutcome = context.processSinglePinkSheet(spreadsheet, {
       submissionId: 'pink-1',
       submittedAt: new Date(2026, 3, 10, 14, 0, 0),
       name: 'Smith, Sam',
@@ -118,9 +118,22 @@ describe('Workflow interactions', () => {
       status: 'Pending',
     });
 
-    expect(completedOutcome.statusValue).toBe('Completed');
+    expect(pendingOutcome.statusValue).toBe('Pending');
+    expect(spreadsheet.getSheetByName('Tuba').getRange(2, 2).getValue()).toBe('Absent');
+    expect(spreadsheet.getSheetByName('Tuba').getRange(2, 2).getNote()).toContain('Pink Sheet pending');
+
+    const approvedOutcome = context.processSinglePinkSheet(spreadsheet, {
+      submissionId: 'pink-1',
+      submittedAt: new Date(2026, 3, 10, 14, 0, 0),
+      name: 'Smith, Sam',
+      section: 'Tuba',
+      date: new Date(2026, 3, 14, 0, 0, 0),
+      status: 'Approved',
+    });
+
+    expect(approvedOutcome.statusValue).toBe('Completed');
     expect(spreadsheet.getSheetByName('Tuba').getRange(2, 2).getValue()).toBe('Excused');
-    expect(spreadsheet.getSheetByName('Tuba').getRange(2, 2).getNote()).toContain('Status: Completed');
+    expect(spreadsheet.getSheetByName('Tuba').getRange(2, 2).getNote()).toContain('Pink Sheet approved');
 
     const missingDateOutcome = context.processSinglePinkSheet(spreadsheet, {
       submissionId: 'pink-2',
@@ -165,7 +178,8 @@ describe('Workflow interactions', () => {
 
     expect(rowIndex).toBe(2);
     expect(spreadsheet.getSheetByName('Yellow Sheets').getRange(2, 11).getValue()).toBe('Pending');
-    expect(spreadsheet.getSheetByName('Tuba').getRange(2, 1).getNote()).toBe('Pending Yellow Sheet');
+    expect(spreadsheet.getSheetByName('Tuba').getRange(2, 1).getNote()).toContain('Pending Yellow Sheet');
+    expect(spreadsheet.getSheetByName('Tuba').getRange(2, 1).getNote()).toContain('Submitted: ');
   });
 
   test('Roster sync row builder preserves existing values and notes by student name', () => {
@@ -173,10 +187,11 @@ describe('Workflow interactions', () => {
     loadCoreWorkflowScripts(context);
 
     const rows = context.buildSectionSyncRows(
+      'Tuba',
       ['Alpha, Ana', 'Zulu, Zoey'],
       3,
       {
-        'Zulu, Zoey': {
+        'Tuba||Zulu, Zoey': {
           values: ['Zulu, Zoey', 'Present', 'Tardy'],
           notes: ['', 'note-1', 'note-2'],
         },

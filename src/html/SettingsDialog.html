@@ -229,6 +229,22 @@
               <input id="STATUS_COMPLETE" type="text" value="<?= settingsModel.values.STATUS_COMPLETE ?>" />
             </div>
             <div class="field">
+              <label for="STATUS_COLOR_PENDING">Pending Chip Color</label>
+              <input id="STATUS_COLOR_PENDING" type="color" value="<?= settingsModel.values.STATUS_COLOR_PENDING ?>" />
+            </div>
+            <div class="field">
+              <label for="STATUS_COLOR_APPROVED">Approved Chip Color</label>
+              <input id="STATUS_COLOR_APPROVED" type="color" value="<?= settingsModel.values.STATUS_COLOR_APPROVED ?>" />
+            </div>
+            <div class="field">
+              <label for="STATUS_COLOR_DENIED">Denied Chip Color</label>
+              <input id="STATUS_COLOR_DENIED" type="color" value="<?= settingsModel.values.STATUS_COLOR_DENIED ?>" />
+            </div>
+            <div class="field">
+              <label for="STATUS_COLOR_COMPLETE">Completed Chip Color</label>
+              <input id="STATUS_COLOR_COMPLETE" type="color" value="<?= settingsModel.values.STATUS_COLOR_COMPLETE ?>" />
+            </div>
+            <div class="field">
               <label for="ATTENDANCE_PRESENT">Present Label</label>
               <input id="ATTENDANCE_PRESENT" type="text" value="<?= settingsModel.values.ATTENDANCE_PRESENT ?>" />
             </div>
@@ -270,6 +286,10 @@
         'STATUS_APPROVED',
         'STATUS_DENIED',
         'STATUS_COMPLETE',
+        'STATUS_COLOR_PENDING',
+        'STATUS_COLOR_APPROVED',
+        'STATUS_COLOR_DENIED',
+        'STATUS_COLOR_COMPLETE',
         'ATTENDANCE_PRESENT',
         'ATTENDANCE_TARDY',
         'ATTENDANCE_ABSENT',

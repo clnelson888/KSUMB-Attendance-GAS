@@ -5,7 +5,10 @@
       "Bash(npm list:*)",
       "Bash(npm run:*)",
       "mcp__google-dev-knowledge__search_documents",
-      "mcp__google-apps-script__script_projects_get_content"
+      "mcp__google-apps-script__script_projects_get_content",
+      "mcp__google-dev-knowledge__get_documents",
+      "mcp__google-dev-knowledge__answer_query",
+      "Bash(npm test *)"
     ]
   }
 }

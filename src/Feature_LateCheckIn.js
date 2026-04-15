@@ -68,6 +68,7 @@ function appendLateCheckInQueueRow(payload) {
   var row = buildLateCheckInQueueRow(headers, payload);
 
   lateSheet.appendRow(row);
+  if (typeof applyQueueStatusValidation === 'function') applyQueueStatusValidation(lateSheet);
 
   return {
     sheet: lateSheet,
