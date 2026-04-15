@@ -7,6 +7,8 @@
 function onOpen(e) {
   SpreadsheetApp.getUi()
     .createMenu('Attendance')
+    .addItem('Operations dashboard', 'openOperationsDashboard')
+    .addSeparator()
     .addItem('Settings', 'openSettingsDialog')
     .addItem('Validate environment', 'validateEnvironment')
     .addItem('Initialize system', 'initializeSystem')
