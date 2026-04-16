@@ -94,6 +94,21 @@ function insertRehearsalDate(dateString, timeString) {
     // Read header row (row 1)
     var headers = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
 
+    // If an example placeholder column exists, rename its header in place
+    // to preserve the data validation rules attached to that column.
+    var exampleCol = -1;
+    for (var ec = 1; ec < headers.length; ec++) {
+      if (String(headers[ec]).trim() === EXAMPLE_DATE_HEADER) {
+        exampleCol = ec + 1;
+        break;
+      }
+    }
+    if (exampleCol !== -1) {
+      sheet.getRange(1, exampleCol).setValue(headerString);
+      tabsProcessed++;
+      continue;
+    }
+
     // Date columns start at col 2 (col 1 = Name)
     var dateHeaders = [];
     for (var c = 1; c < headers.length; c++) {

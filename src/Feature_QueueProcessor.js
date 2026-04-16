@@ -35,22 +35,37 @@ function processApprovedRequests() {
 
 /**
  * Finds the 0-based column index in a header row whose date matches the
- * target date (M/d comparison only — ignores time).
+ * target date. Matches on calendar date (M/d) first, then — when multiple
+ * columns share the same date (e.g., two rehearsals on the same day) —
+ * picks the one whose time-of-day is closest to the target's time-of-day.
+ *
+ * This lets Late Check-Ins land on the rehearsal the student was actually
+ * arriving at, rather than always the earliest slot of the day.
  *
  * @param {Array} headers - Row 0 from the section tab (mixed Date/string values).
- * @param {Date} targetDate - The date to match against.
+ * @param {Date} targetDate - The date (and time) to match against.
  * @returns {number} 0-based column index, or -1 if not found.
  */
 function matchDateColumn(headers, targetDate) {
-  var targetMd = Utilities.formatDate(targetDate, getAppTimezone(), 'M/d');
+  var tz = getAppTimezone();
+  var targetMd = Utilities.formatDate(targetDate, tz, 'M/d');
+  var targetMinutes = targetDate.getHours() * 60 + targetDate.getMinutes();
 
+  var bestCol = -1;
+  var bestDiff = Infinity;
   for (var c = 1; c < headers.length; c++) {
     var parsed = parseDateHeader(headers[c]);
     if (!parsed) continue;
-    var headerMd = Utilities.formatDate(parsed, getAppTimezone(), 'M/d');
-    if (headerMd === targetMd) return c;
+    if (Utilities.formatDate(parsed, tz, 'M/d') !== targetMd) continue;
+
+    var headerMinutes = parsed.getHours() * 60 + parsed.getMinutes();
+    var diff = Math.abs(headerMinutes - targetMinutes);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      bestCol = c;
+    }
   }
-  return -1;
+  return bestCol;
 }
 
 // ---------------------------------------------------------------------------

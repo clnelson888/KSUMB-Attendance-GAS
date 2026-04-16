@@ -14,7 +14,9 @@ function getYellowSubmissionStatus(previousStatus, statuses) {
 }
 
 /**
- * Builds the approved Yellow Sheet note text.
+ * Builds the approved Yellow Sheet note text. Approved notes intentionally
+ * omit submission/approval timestamps — once approved, the conflict line is
+ * the only information worth carrying forward on the student's name cell.
  *
  * @param {string} days
  * @param {string} startLabel
@@ -22,21 +24,24 @@ function getYellowSubmissionStatus(previousStatus, statuses) {
  * @returns {string}
  */
 function buildYellowSheetApprovedNote(days, startLabel, endLabel) {
-  var note = 'Class conflict: ' + String(days || '').trim();
+  var header = 'Class conflict: ' + String(days || '').trim();
   var start = String(startLabel || '').trim();
   var end = String(endLabel || '').trim();
   if (start && end) {
-    note += ' ' + start + '-' + end;
+    header += ' ' + start + '-' + end;
   }
-  return note;
+  return header;
 }
 
 /**
- * Returns the note text for a previously approved Yellow Sheet that has been
- * edited and must be re-approved.
+ * Returns the note text for a pending / previously approved Yellow Sheet
+ * whose submission has not yet been re-approved.
  *
+ * @param {string} [submittedAtLabel]
  * @returns {string}
  */
-function getPendingYellowSheetNoteText() {
-  return 'Pending Yellow Sheet';
+function getPendingYellowSheetNoteText(submittedAtLabel) {
+  var submitted = String(submittedAtLabel || '').trim();
+  if (!submitted) return 'Pending Yellow Sheet';
+  return 'Pending Yellow Sheet\nSubmitted: ' + submitted;
 }

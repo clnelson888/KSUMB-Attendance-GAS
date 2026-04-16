@@ -15,6 +15,8 @@ function getPinkSheetHeaderMap(headers) {
     date: headers.indexOf('Date'),
     reason: headers.indexOf('Reason'),
     status: headers.indexOf('Status'),
+    approvedAt: headers.indexOf('Approved At'),
+    deniedAt: headers.indexOf('Denied At'),
     processedAt: headers.indexOf('Processed At'),
     error: headers.indexOf('Error'),
   };
@@ -30,6 +32,14 @@ function getPinkSheetHeaderMap(headers) {
  */
 function writePinkSheetOutcome(pinkSheet, headerMap, rowIndex, outcome) {
   pinkSheet.getRange(rowIndex, headerMap.status + 1).setValue(outcome.statusValue);
+
+  if (headerMap.approvedAt !== -1 && outcome.approvedAt != null && outcome.approvedAt !== '') {
+    pinkSheet.getRange(rowIndex, headerMap.approvedAt + 1).setValue(outcome.approvedAt);
+  }
+
+  if (headerMap.deniedAt !== -1 && outcome.deniedAt != null && outcome.deniedAt !== '') {
+    pinkSheet.getRange(rowIndex, headerMap.deniedAt + 1).setValue(outcome.deniedAt);
+  }
 
   if (headerMap.processedAt !== -1) {
     pinkSheet.getRange(rowIndex, headerMap.processedAt + 1).setValue(outcome.processedAt || '');
@@ -60,6 +70,8 @@ function processSinglePinkSheet(ss, payload) {
     return {
       statusValue: payload.status,
       processedAt: '',
+      approvedAt: '',
+      deniedAt: '',
       errorMessage: 'Section tab not found: ' + payload.section,
       updated: false,
     };
@@ -71,6 +83,8 @@ function processSinglePinkSheet(ss, payload) {
     return {
       statusValue: payload.status,
       processedAt: '',
+      approvedAt: '',
+      deniedAt: '',
       errorMessage: 'Section tab is missing roster rows or date columns: ' + payload.section,
       updated: false,
     };
@@ -90,6 +104,8 @@ function processSinglePinkSheet(ss, payload) {
     return {
       statusValue: payload.status,
       processedAt: '',
+      approvedAt: '',
+      deniedAt: '',
       errorMessage: 'Student not found on section tab: ' + payload.name,
       updated: false,
     };
@@ -100,6 +116,8 @@ function processSinglePinkSheet(ss, payload) {
     return {
       statusValue: payload.status,
       processedAt: '',
+      approvedAt: '',
+      deniedAt: '',
       errorMessage: 'Pink Sheet date is invalid for ' + payload.name,
       updated: false,
     };
@@ -109,23 +127,35 @@ function processSinglePinkSheet(ss, payload) {
   var hasMatchingDate = colIndex !== -1;
   var action = determinePinkSheetAction(payload.status, hasMatchingDate, statuses);
 
+  var tz = getAppTimezone();
+  var now = new Date();
+  var approvedAt = payload.approvedAt instanceof Date ? payload.approvedAt : null;
+  var deniedAt = payload.deniedAt instanceof Date ? payload.deniedAt : null;
+
+  if (payload.status === statuses.approved && !approvedAt) approvedAt = now;
+  if (payload.status === statuses.denied && !deniedAt) deniedAt = now;
+
   if (!hasMatchingDate) {
     return {
       statusValue: action.nextStatus,
-      processedAt: action.nextStatus === statuses.complete ? new Date() : '',
+      processedAt: action.nextStatus === statuses.complete ? now : '',
+      approvedAt: approvedAt || '',
+      deniedAt: deniedAt || '',
       errorMessage: '',
       updated: false,
     };
   }
 
-  var noteText = buildPinkSheetNoteText(
-    Utilities.formatDate(payload.submittedAt, getAppTimezone(), 'M/d/yyyy h:mm a'),
-    payload.status === statuses.pending ? statuses.complete : payload.status
-  );
+  var noteText = buildPinkSheetNoteText({
+    statusValue: payload.status,
+    submittedAtLabel: _formatPinkTimestamp(payload.submittedAt, tz),
+    approvedAtLabel: approvedAt ? _formatPinkTimestamp(approvedAt, tz) : '',
+    deniedAtLabel: deniedAt ? _formatPinkTimestamp(deniedAt, tz) : '',
+  });
   var targetCell = sectionSheet.getRange(studentRow, colIndex + 1);
 
   if (action.writeAttendance) {
-    targetCell.setValue(getAttendanceValue('EXCUSED'));
+    targetCell.setValue(action.clearAttendance ? '' : getAttendanceValue('EXCUSED'));
   }
 
   if (action.writeNote) {
@@ -134,10 +164,30 @@ function processSinglePinkSheet(ss, payload) {
 
   return {
     statusValue: action.nextStatus,
-    processedAt: action.nextStatus === statuses.complete ? new Date() : '',
+    processedAt: action.nextStatus === statuses.complete ? now : '',
+    approvedAt: approvedAt || '',
+    deniedAt: deniedAt || '',
     errorMessage: '',
     updated: action.writeAttendance || action.writeNote,
   };
+}
+
+/**
+ * Formats a timestamp for pink sheet notes using the shared note format.
+ * Falls back to toString() when running under tests without Utilities.
+ *
+ * @param {Date|string} value
+ * @param {string} tz
+ * @returns {string}
+ */
+function _formatPinkTimestamp(value, tz) {
+  if (!value) return '';
+  var date = value instanceof Date ? value : new Date(value);
+  if (isNaN(date.getTime())) return '';
+  if (typeof Utilities !== 'undefined' && Utilities && Utilities.formatDate) {
+    return Utilities.formatDate(date, tz, DATETIME_NOTE_FORMAT);
+  }
+  return date.toString();
 }
 
 /**
@@ -173,6 +223,14 @@ function processPinkSheetActions(ss) {
         section: String(allData[i][headerMap.section] || '').trim(),
         date: allData[i][headerMap.date],
         status: statusValue,
+        approvedAt:
+          headerMap.approvedAt !== -1 && allData[i][headerMap.approvedAt] instanceof Date
+            ? allData[i][headerMap.approvedAt]
+            : null,
+        deniedAt:
+          headerMap.deniedAt !== -1 && allData[i][headerMap.deniedAt] instanceof Date
+            ? allData[i][headerMap.deniedAt]
+            : null,
       };
 
       var outcome = processSinglePinkSheet(ss, payload);
@@ -227,6 +285,14 @@ function processPinkSheetsForDate(targetDate) {
         section: String(allData[i][headerMap.section] || '').trim(),
         date: sheetDate,
         status: statusValue,
+        approvedAt:
+          headerMap.approvedAt !== -1 && allData[i][headerMap.approvedAt] instanceof Date
+            ? allData[i][headerMap.approvedAt]
+            : null,
+        deniedAt:
+          headerMap.deniedAt !== -1 && allData[i][headerMap.deniedAt] instanceof Date
+            ? allData[i][headerMap.deniedAt]
+            : null,
       };
 
       var outcome = processSinglePinkSheet(ss, payload);

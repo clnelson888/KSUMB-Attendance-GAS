@@ -46,6 +46,24 @@ const CONFIG_KEYS = {
 const CONFIG_PROPERTY_PREFIX = 'CFG__';
 
 /**
+ * Shared Utilities.formatDate token used for the "Submitted/Approved/Denied"
+ * lines in pink and yellow sheet notes. `h` = 12-hour, `mm` = zero-padded
+ * minutes, `a` = AM/PM (SimpleDateFormat tokens).
+ * @type {string}
+ */
+const DATETIME_NOTE_FORMAT = 'M/d/yyyy h:mm a';
+
+/**
+ * Placeholder header used for a single "example" date column that
+ * clearAttendanceHistory leaves behind on every section tab so that
+ * per-row data validation rules stay attached to a real column. When the
+ * first real rehearsal date is inserted, the example column's header is
+ * renamed in place rather than inserting a new column alongside it.
+ * @type {string}
+ */
+const EXAMPLE_DATE_HEADER = '1/1 12:00 AM';
+
+/**
  * Default values written by initializeSystem() when a setting is missing.
  * @type {Object.<string, string|number>}
  */
@@ -155,12 +173,30 @@ function getLegacyDataConfig() {
   var dataSheet = ss.getSheetByName('Data');
   if (!dataSheet) return {};
 
-  var data = dataSheet.getDataRange().getValues();
+  var values = null;
+  var named = typeof ss.getRangeByName === 'function' ? ss.getRangeByName('DATA_CONFIG') : null;
+  if (named) {
+    values = named.getValues();
+  } else if (typeof _detectTableRange === 'function') {
+    try {
+      values = _detectTableRange(dataSheet, ['Key'], 20);
+    } catch (err) {
+      values = null;
+    }
+  }
+
+  if (!values) {
+    var fallback = dataSheet.getDataRange && dataSheet.getDataRange();
+    values = fallback ? fallback.getValues() : null;
+  }
+
+  if (!values || values.length < 2) return {};
+
   var config = {};
-  for (var i = 1; i < data.length; i++) {
-    var key = String(data[i][0] || '').trim();
+  for (var i = 1; i < values.length; i++) {
+    var key = String(values[i][0] || '').trim();
     if (!key) continue;
-    config[key] = data[i][1];
+    config[key] = values[i][1];
   }
   return config;
 }

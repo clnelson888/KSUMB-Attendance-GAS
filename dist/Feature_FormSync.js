@@ -23,6 +23,7 @@ function syncRosterToForms() {
   var roster = _getRosterData();
   var allNames = roster.allNames;
   var namesBySection = roster.namesBySection;
+  var ignoredCount = roster.ignoredCount || 0;
   var updatedQuestions = 0;
 
   var formIds = [ids.PINK, ids.LATE, ids.YELLOW];
@@ -31,9 +32,17 @@ function syncRosterToForms() {
     updatedQuestions += _syncFormSectionNameLists(FormApp.openById(formIds[f]), namesBySection);
   }
 
-  var msg = 'Synced ' + allNames.length + ' member(s) across ' + updatedQuestions + ' form question(s).';
+  var msg =
+    'Synced ' +
+    allNames.length +
+    ' member(s) across ' +
+    updatedQuestions +
+    ' form question(s). Ignored ' +
+    ignoredCount +
+    ' row(s).';
   SpreadsheetApp.getActiveSpreadsheet().toast(msg, 'Sync Forms');
   console.log('FormSync: ' + msg);
+  return { synced: allNames.length, questions: updatedQuestions, ignored: ignoredCount };
 }
 
 // ---------------------------------------------------------------------------
@@ -88,7 +97,9 @@ function onPinkSubmit(e) {
     var submittedAt = e.response.getTimestamp();
     var name = requireResolvedSubmittedName(_field(fields, FORM_NAME_LIST_TITLE), _field(fields, FORM_MANUAL_NAME_TITLE));
     var section = _field(fields, FORM_SECTION_QUESTION_TITLE);
-    var date = _field(fields, 'Date of Absence');
+    var rawDate = _field(fields, 'Date of Absence');
+    var parsedDate = rawDate ? new Date(rawDate) : '';
+    var date = parsedDate && !isNaN(parsedDate.getTime()) ? parsedDate : rawDate;
     var reason = _field(fields, 'Reason');
     var pinkSheet = getSheet('Pink Sheets');
     var headerMap = getPinkSheetHeaderMap(pinkSheet.getRange(1, 1, 1, pinkSheet.getLastColumn()).getValues()[0]);
@@ -103,13 +114,14 @@ function onPinkSubmit(e) {
       getStatusValue('PENDING'),
       '',
       '',
+      '',
+      '',
     ]);
     pinkSheetInfo = {
       sheet: pinkSheet,
       headerMap: headerMap,
       rowIndex: pinkSheet.getLastRow(),
     };
-
     var lock = LockService.getScriptLock();
     lock.waitLock(30000);
     try {

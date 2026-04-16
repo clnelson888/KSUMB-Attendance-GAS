@@ -36,10 +36,6 @@ const CONFIG_KEYS = {
   STATUS_APPROVED: 'STATUS_APPROVED',
   STATUS_DENIED: 'STATUS_DENIED',
   STATUS_COMPLETE: 'STATUS_COMPLETE',
-  STATUS_COLOR_PENDING: 'STATUS_COLOR_PENDING',
-  STATUS_COLOR_APPROVED: 'STATUS_COLOR_APPROVED',
-  STATUS_COLOR_DENIED: 'STATUS_COLOR_DENIED',
-  STATUS_COLOR_COMPLETE: 'STATUS_COLOR_COMPLETE',
   ATTENDANCE_PRESENT: 'ATTENDANCE_PRESENT',
   ATTENDANCE_TARDY: 'ATTENDANCE_TARDY',
   ATTENDANCE_ABSENT: 'ATTENDANCE_ABSENT',
@@ -58,6 +54,16 @@ const CONFIG_PROPERTY_PREFIX = 'CFG__';
 const DATETIME_NOTE_FORMAT = 'M/d/yyyy h:mm a';
 
 /**
+ * Placeholder header used for a single "example" date column that
+ * clearAttendanceHistory leaves behind on every section tab so that
+ * per-row data validation rules stay attached to a real column. When the
+ * first real rehearsal date is inserted, the example column's header is
+ * renamed in place rather than inserting a new column alongside it.
+ * @type {string}
+ */
+const EXAMPLE_DATE_HEADER = '1/1 12:00 AM';
+
+/**
  * Default values written by initializeSystem() when a setting is missing.
  * @type {Object.<string, string|number>}
  */
@@ -70,10 +76,6 @@ DEFAULT_CONFIG_VALUES[CONFIG_KEYS.STATUS_PENDING] = 'Pending';
 DEFAULT_CONFIG_VALUES[CONFIG_KEYS.STATUS_APPROVED] = 'Approved';
 DEFAULT_CONFIG_VALUES[CONFIG_KEYS.STATUS_DENIED] = 'Denied';
 DEFAULT_CONFIG_VALUES[CONFIG_KEYS.STATUS_COMPLETE] = 'Completed';
-DEFAULT_CONFIG_VALUES[CONFIG_KEYS.STATUS_COLOR_PENDING] = '#ffe5a0';
-DEFAULT_CONFIG_VALUES[CONFIG_KEYS.STATUS_COLOR_APPROVED] = '#bfe1f6';
-DEFAULT_CONFIG_VALUES[CONFIG_KEYS.STATUS_COLOR_DENIED] = '#ffcfc9';
-DEFAULT_CONFIG_VALUES[CONFIG_KEYS.STATUS_COLOR_COMPLETE] = '#d4edbc';
 DEFAULT_CONFIG_VALUES[CONFIG_KEYS.ATTENDANCE_PRESENT] = 'Present';
 DEFAULT_CONFIG_VALUES[CONFIG_KEYS.ATTENDANCE_TARDY] = 'Tardy';
 DEFAULT_CONFIG_VALUES[CONFIG_KEYS.ATTENDANCE_ABSENT] = 'Absent';

@@ -155,7 +155,7 @@ function processSinglePinkSheet(ss, payload) {
   var targetCell = sectionSheet.getRange(studentRow, colIndex + 1);
 
   if (action.writeAttendance) {
-    targetCell.setValue(getAttendanceValue('EXCUSED'));
+    targetCell.setValue(action.clearAttendance ? '' : getAttendanceValue('EXCUSED'));
   }
 
   if (action.writeNote) {

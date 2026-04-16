@@ -5,9 +5,6 @@
 // No logic changes required.
 
 var FORM_CONFIG = {
-  // Choices for the "Ensemble" question on Pink and Yellow forms.
-  ENSEMBLE_CHOICES: ['KSUMB'],
-
   // Choices for the "Conflict Days" checkbox question on the Yellow Sheet form.
   CONFLICT_DAYS: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
 };
@@ -99,10 +96,9 @@ function logFormUrls() {
  *
  * Questions:
  *   1. Your Full Name      — LIST  (roster)
- *   2. Ensemble            — LIST  (FORM_CONFIG.ENSEMBLE_CHOICES)
- *   3. Your Section        — LIST  (SECTION_TABS)
- *   4. Date of Absence     — DATE
- *   5. Reason              — PARAGRAPH
+ *   2. Your Section        — LIST  (SECTION_TABS)
+ *   3. Date of Absence     — DATE
+ *   4. Reason              — PARAGRAPH
  *
  * @param {string[]} allNames  Sorted active-member full names.
  * @returns {GoogleAppsScript.Forms.Form}
@@ -123,10 +119,6 @@ function _buildPinkForm(namesBySection) {
     var section = sectionTabs[i];
     pageMap[section] = form.addPageBreakItem();
     _addSectionPage(form, section, namesBySection[section] || [], pageMap[section], function(sectionForm) {
-      var ensembleItem = sectionForm.addListItem();
-      ensembleItem.setTitle('Ensemble').setRequired(true);
-      ensembleItem.setChoiceValues(FORM_CONFIG.ENSEMBLE_CHOICES);
-
       var dateItem = sectionForm.addDateItem();
       dateItem.setTitle('Date of Absence').setRequired(true);
 
@@ -189,12 +181,11 @@ function _buildLateForm(namesBySection) {
  *
  * Questions:
  *   1. Your Full Name        — LIST      (roster)
- *   2. Ensemble              — LIST      (FORM_CONFIG.ENSEMBLE_CHOICES)
- *   3. Your Section          — LIST      (SECTION_TABS)
- *   4. Conflict Days         — CHECKBOX  (FORM_CONFIG.CONFLICT_DAYS)
- *   5. Conflict Start Time   — TIME
- *   6. Conflict End Time     — TIME
- *   7. Notes                 — PARAGRAPH (optional)
+ *   2. Your Section          — LIST      (SECTION_TABS)
+ *   3. Conflict Days         — CHECKBOX  (FORM_CONFIG.CONFLICT_DAYS)
+ *   4. Conflict Start Time   — TIME
+ *   5. Conflict End Time     — TIME
+ *   6. Notes                 — PARAGRAPH (optional)
  *
  * @param {string[]} allNames  Sorted active-member full names.
  * @returns {GoogleAppsScript.Forms.Form}
@@ -216,10 +207,6 @@ function _buildYellowForm(namesBySection) {
     var section = sectionTabs[i];
     pageMap[section] = form.addPageBreakItem();
     _addSectionPage(form, section, namesBySection[section] || [], pageMap[section], function(sectionForm) {
-      var ensembleItem = sectionForm.addListItem();
-      ensembleItem.setTitle('Ensemble').setRequired(true);
-      ensembleItem.setChoiceValues(FORM_CONFIG.ENSEMBLE_CHOICES);
-
       var daysItem = sectionForm.addCheckboxItem();
       daysItem.setTitle('Conflict Days').setRequired(true);
       daysItem.setChoiceValues(FORM_CONFIG.CONFLICT_DAYS);

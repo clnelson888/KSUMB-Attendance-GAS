@@ -28,7 +28,8 @@ function onOpen(e) {
 
 /**
  * Runs when a user edits the spreadsheet directly.
- * Processes Yellow Sheet approvals/denials as soon as staff change Status.
+ * Processes Yellow Sheet and Pink Sheet approvals/denials as soon as staff
+ * change the Status cell.
  *
  * @param {GoogleAppsScript.Events.SheetsOnEdit} e
  */
@@ -39,13 +40,17 @@ function onEdit(e) {
   var sheet = range.getSheet();
   if (!sheet) return;
 
+  var sheetName = sheet.getName();
+  if (sheetName !== 'Yellow Sheets' && sheetName !== 'Pink Sheets') return;
+
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   var statusColumn = headers.indexOf('Status') + 1;
   if (statusColumn <= 0) return;
 
   if (
-    !shouldProcessYellowStatusEdit(
-      sheet.getName(),
+    !shouldProcessQueueStatusEdit(
+      sheetName,
+      sheetName,
       range.getRow(),
       range.getColumn(),
       statusColumn,
@@ -57,5 +62,10 @@ function onEdit(e) {
     return;
   }
 
-  processYellowSheetActions(SpreadsheetApp.getActiveSpreadsheet());
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (sheetName === 'Yellow Sheets') {
+    processYellowSheetActions(ss);
+  } else {
+    processPinkSheetActions(ss);
+  }
 }

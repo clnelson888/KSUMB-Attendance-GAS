@@ -25,28 +25,32 @@ describe('PinkSheetLogic', () => {
 
     expect(logic.determinePinkSheetAction('Approved', true, statuses)).toEqual({
       writeAttendance: true,
+      clearAttendance: false,
       writeNote: true,
       nextStatus: 'Completed',
     });
 
     expect(logic.determinePinkSheetAction('Approved', false, statuses)).toEqual({
       writeAttendance: false,
+      clearAttendance: false,
       writeNote: false,
       nextStatus: 'Approved',
     });
   });
 
-  test('denied rows write a note and complete only when the date exists', () => {
+  test('denied rows clear any prior Excused, add a note, and complete when the date exists', () => {
     const logic = loadPinkSheetLogic();
 
     expect(logic.determinePinkSheetAction('Denied', true, statuses)).toEqual({
-      writeAttendance: false,
+      writeAttendance: true,
+      clearAttendance: true,
       writeNote: true,
       nextStatus: 'Completed',
     });
 
     expect(logic.determinePinkSheetAction('Denied', false, statuses)).toEqual({
       writeAttendance: false,
+      clearAttendance: true,
       writeNote: false,
       nextStatus: 'Denied',
     });
@@ -57,12 +61,14 @@ describe('PinkSheetLogic', () => {
 
     expect(logic.determinePinkSheetAction('Pending', true, statuses)).toEqual({
       writeAttendance: false,
+      clearAttendance: false,
       writeNote: true,
       nextStatus: 'Pending',
     });
 
     expect(logic.determinePinkSheetAction('Pending', false, statuses)).toEqual({
       writeAttendance: false,
+      clearAttendance: false,
       writeNote: false,
       nextStatus: 'Pending',
     });

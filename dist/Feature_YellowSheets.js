@@ -116,14 +116,28 @@ function upsertYellowSheetSubmission(payload) {
   var targetRow = existingRow === -1 ? yellowSheet.getLastRow() + 1 : existingRow;
   yellowSheet.getRange(targetRow, 1, 1, rowValues.length).setValues([rowValues]);
 
-  if (existingRow !== -1 && isCompleteStatusValue(previousStatus)) {
-    var nameCell = findYellowStudentNameCell(ss, payload.section, payload.name);
-    if (nameCell) {
-      nameCell.setNote(getPendingYellowSheetNoteText());
-    }
+  var pendingNameCell = findYellowStudentNameCell(ss, payload.section, payload.name);
+  if (pendingNameCell) {
+    pendingNameCell.setNote(getPendingYellowSheetNoteText(_formatYellowTimestamp(payload.submittedAt)));
   }
 
   return targetRow;
+}
+
+/**
+ * Formats a timestamp for yellow sheet notes using DATETIME_NOTE_FORMAT.
+ *
+ * @param {Date|string} value
+ * @returns {string}
+ */
+function _formatYellowTimestamp(value) {
+  if (!value) return '';
+  var date = value instanceof Date ? value : new Date(value);
+  if (isNaN(date.getTime())) return '';
+  if (typeof Utilities !== 'undefined' && Utilities && Utilities.formatDate) {
+    return Utilities.formatDate(date, getAppTimezone(), DATETIME_NOTE_FORMAT);
+  }
+  return date.toString();
 }
 
 /**
@@ -156,6 +170,8 @@ function processYellowSheetActions(ss) {
       var nameCell = findYellowStudentNameCell(ss, section, name);
       if (!nameCell) continue;
 
+      var processedAt = new Date();
+
       if (statusValue === approvedStatus) {
         nameCell.setNote(
           buildYellowSheetApprovedNote(
@@ -170,7 +186,7 @@ function processYellowSheetActions(ss) {
 
       yellowSheet.getRange(i + 1, headerMap.status + 1).setValue(completeStatus);
       if (headerMap.processedAt !== -1) {
-        yellowSheet.getRange(i + 1, headerMap.processedAt + 1).setValue(new Date());
+        yellowSheet.getRange(i + 1, headerMap.processedAt + 1).setValue(processedAt);
       }
       if (headerMap.error !== -1) {
         yellowSheet.getRange(i + 1, headerMap.error + 1).setValue('');

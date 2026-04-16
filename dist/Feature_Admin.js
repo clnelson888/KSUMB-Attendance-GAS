@@ -13,6 +13,8 @@ const SYSTEM_SHEET_HEADERS = {
     'Date',
     'Reason',
     'Status',
+    'Approved At',
+    'Denied At',
     'Processed At',
     'Error',
   ],
@@ -152,33 +154,6 @@ function normalizeLegacyStatusValues(ss) {
 }
 
 /**
- * Applies a status validation rule to the Status column of a queue sheet.
- *
- * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
- */
-function applyQueueStatusValidation(sheet) {
-  var headerRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  var statusIndex = headerRow.indexOf('Status');
-  if (statusIndex === -1) return;
-
-  var statuses;
-  if (sheet.getName() === 'Late Check-Ins') {
-    statuses = [getStatusValue('PENDING'), getStatusValue('COMPLETE')];
-  } else {
-    statuses = [
-      getStatusValue('PENDING'),
-      getStatusValue('APPROVED'),
-      getStatusValue('DENIED'),
-      getStatusValue('COMPLETE'),
-    ];
-  }
-
-  var rule = SpreadsheetApp.newDataValidation().requireValueInList(statuses, true).setAllowInvalid(false).build();
-  var rowCount = Math.max(sheet.getMaxRows() - 1, 1);
-  sheet.getRange(2, statusIndex + 1, rowCount, 1).setDataValidation(rule);
-}
-
-/**
  * Writes a row to the System Log sheet if it exists.
  *
  * @param {string} feature
@@ -216,11 +191,6 @@ function initializeSystem() {
   resetConfigCache();
   var legacyStatusUpdates = normalizeLegacyStatusValues(ss);
   resetConfigCache();
-
-  var queueSheets = ['Pink Sheets', 'Late Check-Ins', 'Yellow Sheets'];
-  for (var j = 0; j < queueSheets.length; j++) {
-    applyQueueStatusValidation(ss.getSheetByName(queueSheets[j]));
-  }
 
   var configuredSections = getConfiguredSectionTabs();
   for (var k = 0; k < configuredSections.length; k++) {

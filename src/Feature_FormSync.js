@@ -122,8 +122,6 @@ function onPinkSubmit(e) {
       headerMap: headerMap,
       rowIndex: pinkSheet.getLastRow(),
     };
-    if (typeof applyQueueStatusValidation === 'function') applyQueueStatusValidation(pinkSheet);
-
     var lock = LockService.getScriptLock();
     lock.waitLock(30000);
     try {

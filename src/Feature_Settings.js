@@ -41,7 +41,6 @@ function saveSettings(rawValues) {
   resetConfigCache();
 
   var sectionUpdates = ensureConfiguredSectionTabsExist(SpreadsheetApp.getActiveSpreadsheet());
-  applyExistingQueueStatusValidations(SpreadsheetApp.getActiveSpreadsheet());
 
   logSystemEvent(
     'Settings',
@@ -71,7 +70,6 @@ function resetSettingsToDefaults() {
   resetConfigCache();
 
   var sectionUpdates = ensureConfiguredSectionTabsExist(SpreadsheetApp.getActiveSpreadsheet());
-  applyExistingQueueStatusValidations(SpreadsheetApp.getActiveSpreadsheet());
 
   logSystemEvent(
     'Settings',
@@ -128,15 +126,3 @@ function ensureConfiguredSectionTabsExist(ss) {
   return result;
 }
 
-/**
- * Applies queue status validation to any existing queue sheets.
- *
- * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ss
- */
-function applyExistingQueueStatusValidations(ss) {
-  var queueSheets = ['Pink Sheets', 'Late Check-Ins', 'Yellow Sheets'];
-  for (var i = 0; i < queueSheets.length; i++) {
-    var sheet = ss.getSheetByName(queueSheets[i]);
-    if (sheet) applyQueueStatusValidation(sheet);
-  }
-}

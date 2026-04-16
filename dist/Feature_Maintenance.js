@@ -16,9 +16,22 @@ function clearAttendanceHistory() {
       if (!sheet) continue;
 
       var lastCol = sheet.getLastColumn();
-      if (lastCol <= 1) continue;
+      var lastRow = sheet.getLastRow();
 
-      sheet.deleteColumns(2, lastCol - 1);
+      if (lastCol < 2) {
+        sheet.getRange(1, 2).setValue(EXAMPLE_DATE_HEADER);
+        cleared++;
+        continue;
+      }
+
+      if (lastCol > 2) {
+        sheet.deleteColumns(3, lastCol - 2);
+      }
+
+      sheet.getRange(1, 2).setValue(EXAMPLE_DATE_HEADER);
+      if (lastRow > 1) {
+        sheet.getRange(2, 2, lastRow - 1, 1).clearContent().clearNote();
+      }
       cleared++;
     }
 

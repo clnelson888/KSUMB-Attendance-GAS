@@ -154,32 +154,6 @@ function normalizeLegacyStatusValues(ss) {
 }
 
 /**
- * Applies a status validation rule to the Status column of a queue sheet.
- *
- * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
- */
-function applyQueueStatusValidation(sheet) {
-  if (!sheet) return;
-  var headerRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  var statusIndex = headerRow.indexOf('Status');
-  if (statusIndex === -1) return;
-
-  var statuses;
-  if (sheet.getName() === 'Late Check-Ins') {
-    statuses = [getStatusValue('PENDING'), getStatusValue('COMPLETE')];
-  } else {
-    statuses = [
-      getStatusValue('PENDING'),
-      getStatusValue('APPROVED'),
-      getStatusValue('DENIED'),
-      getStatusValue('COMPLETE'),
-    ];
-  }
-
-  applyStatusValidationToColumn(sheet, statusIndex, statuses);
-}
-
-/**
  * Writes a row to the System Log sheet if it exists.
  *
  * @param {string} feature
@@ -217,11 +191,6 @@ function initializeSystem() {
   resetConfigCache();
   var legacyStatusUpdates = normalizeLegacyStatusValues(ss);
   resetConfigCache();
-
-  var queueSheets = ['Pink Sheets', 'Late Check-Ins', 'Yellow Sheets'];
-  for (var j = 0; j < queueSheets.length; j++) {
-    applyQueueStatusValidation(ss.getSheetByName(queueSheets[j]));
-  }
 
   var configuredSections = getConfiguredSectionTabs();
   for (var k = 0; k < configuredSections.length; k++) {

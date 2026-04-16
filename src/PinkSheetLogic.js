@@ -13,6 +13,7 @@ function determinePinkSheetAction(statusValue, hasMatchingDate, statuses) {
   if (normalized === statuses.approved) {
     return {
       writeAttendance: hasMatchingDate,
+      clearAttendance: false,
       writeNote: hasMatchingDate,
       nextStatus: hasMatchingDate ? statuses.complete : statuses.approved,
     };
@@ -20,7 +21,8 @@ function determinePinkSheetAction(statusValue, hasMatchingDate, statuses) {
 
   if (normalized === statuses.denied) {
     return {
-      writeAttendance: false,
+      writeAttendance: hasMatchingDate,
+      clearAttendance: true,
       writeNote: hasMatchingDate,
       nextStatus: hasMatchingDate ? statuses.complete : statuses.denied,
     };
@@ -29,6 +31,7 @@ function determinePinkSheetAction(statusValue, hasMatchingDate, statuses) {
   if (normalized === statuses.pending) {
     return {
       writeAttendance: false,
+      clearAttendance: false,
       writeNote: hasMatchingDate,
       nextStatus: statuses.pending,
     };
@@ -36,6 +39,7 @@ function determinePinkSheetAction(statusValue, hasMatchingDate, statuses) {
 
   return {
     writeAttendance: false,
+    clearAttendance: false,
     writeNote: false,
     nextStatus: normalized,
   };

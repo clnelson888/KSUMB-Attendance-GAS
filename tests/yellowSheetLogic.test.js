@@ -43,7 +43,7 @@ describe('YellowSheetLogic', () => {
     );
   });
 
-  test('approved note text appends submitted and approved timestamps when provided', () => {
+  test('approved note text omits submission/approval timestamps', () => {
     const logic = loadYellowSheetLogic();
 
     expect(
@@ -54,8 +54,6 @@ describe('YellowSheetLogic', () => {
         '4/14/2026 9:00 AM',
         '4/15/2026 10:15 AM'
       )
-    ).toBe(
-      'Class conflict: Tuesday 1:30 PM-2:20 PM\nSubmitted: 4/14/2026 9:00 AM\nApproved: 4/15/2026 10:15 AM'
-    );
+    ).toBe('Class conflict: Tuesday 1:30 PM-2:20 PM');
   });
 });

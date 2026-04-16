@@ -14,29 +14,23 @@ function getYellowSubmissionStatus(previousStatus, statuses) {
 }
 
 /**
- * Builds the approved Yellow Sheet note text.
+ * Builds the approved Yellow Sheet note text. Approved notes intentionally
+ * omit submission/approval timestamps — once approved, the conflict line is
+ * the only information worth carrying forward on the student's name cell.
  *
  * @param {string} days
  * @param {string} startLabel
  * @param {string} endLabel
- * @param {string} [submittedAtLabel]
- * @param {string} [approvedAtLabel]
  * @returns {string}
  */
-function buildYellowSheetApprovedNote(days, startLabel, endLabel, submittedAtLabel, approvedAtLabel) {
+function buildYellowSheetApprovedNote(days, startLabel, endLabel) {
   var header = 'Class conflict: ' + String(days || '').trim();
   var start = String(startLabel || '').trim();
   var end = String(endLabel || '').trim();
   if (start && end) {
     header += ' ' + start + '-' + end;
   }
-
-  var lines = [header];
-  var submitted = String(submittedAtLabel || '').trim();
-  var approved = String(approvedAtLabel || '').trim();
-  if (submitted) lines.push('Submitted: ' + submitted);
-  if (approved) lines.push('Approved: ' + approved);
-  return lines.join('\n');
+  return header;
 }
 
 /**

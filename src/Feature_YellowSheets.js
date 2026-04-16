@@ -116,15 +116,9 @@ function upsertYellowSheetSubmission(payload) {
   var targetRow = existingRow === -1 ? yellowSheet.getLastRow() + 1 : existingRow;
   yellowSheet.getRange(targetRow, 1, 1, rowValues.length).setValues([rowValues]);
 
-  if (existingRow === -1 && typeof applyQueueStatusValidation === 'function') {
-    applyQueueStatusValidation(yellowSheet);
-  }
-
-  if (existingRow !== -1 && isCompleteStatusValue(previousStatus)) {
-    var nameCell = findYellowStudentNameCell(ss, payload.section, payload.name);
-    if (nameCell) {
-      nameCell.setNote(getPendingYellowSheetNoteText(_formatYellowTimestamp(payload.submittedAt)));
-    }
+  var pendingNameCell = findYellowStudentNameCell(ss, payload.section, payload.name);
+  if (pendingNameCell) {
+    pendingNameCell.setNote(getPendingYellowSheetNoteText(_formatYellowTimestamp(payload.submittedAt)));
   }
 
   return targetRow;
@@ -183,9 +177,7 @@ function processYellowSheetActions(ss) {
           buildYellowSheetApprovedNote(
             String(allData[i][headerMap.conflictDays] || '').trim(),
             formatTimeValue(allData[i][headerMap.startTime]),
-            formatTimeValue(allData[i][headerMap.endTime]),
-            _formatYellowTimestamp(allData[i][headerMap.submittedAt]),
-            _formatYellowTimestamp(processedAt)
+            formatTimeValue(allData[i][headerMap.endTime])
           )
         );
       } else {
