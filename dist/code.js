@@ -5,24 +5,32 @@
  * @param {GoogleAppsScript.Events.SheetsOnOpen} e - The onOpen event object.
  */
 function onOpen(e) {
-  SpreadsheetApp.getUi()
-    .createMenu('Attendance')
+  var ui = SpreadsheetApp.getUi();
+
+  var rosterMenu = ui
+    .createMenu('📋 Roster & Forms')
+    .addItem('Sync roster from database', 'syncRosterFromDatabase')
+    .addItem('Sync roster names to forms', 'syncRosterToForms')
+    .addItem('Build / rebuild forms', 'buildAllForms');
+
+  var adminMenu = ui
+    .createMenu('⚠️ Admin')
     .addItem('Settings', 'openSettingsDialog')
     .addItem('Validate environment', 'validateEnvironment')
     .addItem('Initialize system', 'initializeSystem')
     .addSeparator()
-    .addItem('Add rehearsal date', 'addRehearsalDate')
-    .addItem('Delete rehearsal date', 'openDeleteDateDialog')
-    .addSeparator()
-    .addItem('Build / rebuild forms', 'buildAllForms')
-    .addItem('Roster sync', 'syncRosterFromDatabase')
-    .addItem('Sync roster names to forms', 'syncRosterToForms')
-    .addSeparator()
-    .addItem('Clear attendance history', 'clearAttendanceHistory')
     .addItem('New year setup', 'newYearSetup')
+    .addItem('Clear attendance history', 'clearAttendanceHistory');
+
+  ui.createMenu('🥁 Attendance')
+    .addItem('➕ Add rehearsal date', 'addRehearsalDate')
+    .addItem('🗑️ Delete rehearsal date', 'openDeleteDateDialog')
     .addSeparator()
-    .addItem('Process approved requests', 'processApprovedRequests')
-    .addItem('Generate concern list', 'generateConcernList')
+    .addItem('✅ Process approved requests', 'processApprovedRequests')
+    .addItem('⚡ Generate concern list', 'generateConcernList')
+    .addSeparator()
+    .addSubMenu(rosterMenu)
+    .addSubMenu(adminMenu)
     .addToUi();
 }
 
