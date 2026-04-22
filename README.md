@@ -51,7 +51,6 @@ Current admin actions are exposed through the `Attendance` menu in the sheet:
 - `Clear attendance history`
 - `New year setup`
 - `Process approved requests`
-- `Generate concern list`
 
 ### What staff still do manually in the sheet
 
@@ -109,7 +108,7 @@ Typical staff workflow:
 5. Review `Pink Sheets` and `Yellow Sheets` logs.
 6. Change statuses to `Approved` or `Denied` where needed.
 7. Run `Attendance -> Process approved requests`.
-8. Open or refresh the `Concern List`.
+8. Open the `Concern List` tab to review non-present students (the tab is maintained with sheet formulas).
 
 ## Late Check-In Workflow
 
@@ -154,14 +153,7 @@ If a student edits a previously completed Yellow response:
 
 ## Concern List Workflow
 
-Current intended usage:
-
-1. Run `Attendance -> Generate concern list`.
-2. The script prepares the `Concern List` sheet with:
-   - a rehearsal selector in `B1`
-   - formula-driven results below
-3. Change the selected rehearsal in `B1`.
-4. The list updates automatically without rerunning Apps Script.
+The `Concern List` tab is maintained in the spreadsheet itself with sheet formulas (backed by the `GET_SHEETS()` custom function in `src/code.js`). There is no Apps Script feature to generate or refresh it — pick the rehearsal in the selector cell and the list recalculates automatically.
 
 ## Maintenance Actions
 
@@ -253,10 +245,9 @@ You should test in the actual bound Google Sheet.
 
 ### Concern List
 
-1. Run `Generate concern list`.
-2. Open the `Concern List` tab.
-3. Change the selected rehearsal in `B1`.
-4. Confirm the formula output updates immediately.
+1. Open the `Concern List` tab.
+2. Change the selected rehearsal in the selector cell.
+3. Confirm the formula output updates immediately. (The list is now pure sheet formulas — no Apps Script involvement.)
 
 ## Automated Tests
 
@@ -276,7 +267,6 @@ What is covered so far:
 - Yellow Sheet edit/pending rules
 - queue reset behavior for deleted dates
 - roster grouping logic
-- Concern List formula generation
 - workflow interaction tests using a lightweight GAS spreadsheet harness
 
 These tests do not replace live Google Sheets testing. They reduce regression risk while developing.
@@ -325,7 +315,6 @@ If you are trying to use the system right now:
 - [Feature_YellowSheets.js](./KSUMB-Attendance-GAS/src/Feature_YellowSheets.js): Yellow Sheet processing
 - [Feature_RosterSync.js](./KSUMB-Attendance-GAS/src/Feature_RosterSync.js): spreadsheet roster sync
 - [Feature_Maintenance.js](./KSUMB-Attendance-GAS/src/Feature_Maintenance.js): clear/reset operations
-- [Feature_ConcernList.js](./KSUMB-Attendance-GAS/src/Feature_ConcernList.js): formula-driven concern list setup
 
 ## Related Documents
 

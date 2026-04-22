@@ -27,7 +27,6 @@ function onOpen(e) {
     .addItem('🗑️ Delete rehearsal date', 'openDeleteDateDialog')
     .addSeparator()
     .addItem('✅ Process approved requests', 'processApprovedRequests')
-    .addItem('⚡ Generate concern list', 'generateConcernList')
     .addSeparator()
     .addSubMenu(rosterMenu)
     .addSubMenu(adminMenu)
@@ -76,4 +75,13 @@ function onEdit(e) {
   } else {
     processPinkSheetActions(ss);
   }
+}
+
+/**
+ * Retrieves all sheet names and their unique GIDs.
+ * @customfunction
+ */
+function GET_SHEETS() {
+  const sheets = SpreadsheetApp.getActiveSpreadsheet().getSheets();
+  return sheets.map((sheet) => [sheet.getName(), sheet.getSheetId()]);
 }

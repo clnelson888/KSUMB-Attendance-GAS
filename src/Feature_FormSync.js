@@ -95,11 +95,25 @@ function onPinkSubmit(e) {
     var fields = _responseToFields(e.response);
     var submissionId = generateSubmissionId();
     var submittedAt = e.response.getTimestamp();
-    var name = requireResolvedSubmittedName(_field(fields, FORM_NAME_LIST_TITLE), _field(fields, FORM_MANUAL_NAME_TITLE));
+    var name = requireResolvedSubmittedName(
+      _field(fields, FORM_NAME_LIST_TITLE),
+      _field(fields, FORM_MANUAL_NAME_TITLE)
+    );
     var section = _field(fields, FORM_SECTION_QUESTION_TITLE);
     var rawDate = _field(fields, 'Date of Absence');
-    var parsedDate = rawDate ? new Date(rawDate) : '';
-    var date = parsedDate && !isNaN(parsedDate.getTime()) ? parsedDate : rawDate;
+    // Google Forms date items return "YYYY-MM-DD" (ISO format). new Date("YYYY-MM-DD")
+    // parses as UTC midnight, which in CDT is the previous calendar day. Parse the
+    // components directly so the date is local midnight instead.
+    var date = '';
+    if (rawDate) {
+      var isoMatch = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (isoMatch) {
+        date = new Date(parseInt(isoMatch[1], 10), parseInt(isoMatch[2], 10) - 1, parseInt(isoMatch[3], 10));
+      } else {
+        var parsedDate = new Date(rawDate);
+        date = isNaN(parsedDate.getTime()) ? rawDate : parsedDate;
+      }
+    }
     var reason = _field(fields, 'Reason');
     var pinkSheet = getSheet('Pink Sheets');
     var headerMap = getPinkSheetHeaderMap(pinkSheet.getRange(1, 1, 1, pinkSheet.getLastColumn()).getValues()[0]);

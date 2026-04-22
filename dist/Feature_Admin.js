@@ -45,7 +45,6 @@ const SYSTEM_SHEET_HEADERS = {
     'Processed At',
     'Error',
   ],
-  'Concern List': ['Section', 'Name', 'Status', 'Date'],
   'System Log': ['Timestamp', 'Feature', 'Action', 'Severity', 'Reference ID', 'Message'],
 };
 
