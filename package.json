@@ -8,7 +8,7 @@
     "deploy": "npm run build && npx clasp push",
     "format": "prettier --write src/",
     "lint": "eslint src/",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --passWithNoTests"
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --passWithNoTests"
   },
   "keywords": [],
   "author": "",

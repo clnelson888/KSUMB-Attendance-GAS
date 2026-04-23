@@ -5,12 +5,6 @@
 // No logic changes required.
 
 var FORM_CONFIG = {
-  // Choices for the "Ensemble" question on Pink and Yellow forms.
-  ENSEMBLE_CHOICES: ['KSUMB'],
-
-  // Choices for "Reason for late arrival" on the Late Check-In form.
-  LATE_REASONS: ['Class', 'Parking / traffic', 'Work', 'Personal emergency', 'Other'],
-
   // Choices for the "Conflict Days" checkbox question on the Yellow Sheet form.
   CONFLICT_DAYS: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
 };
@@ -57,7 +51,7 @@ function buildAllForms() {
   var roster = _getRosterData();
 
   ss.toast('Building Pink Sheet form…', 'Form Builder', -1);
-  var pink = _buildPinkForm(roster.allNames);
+  var pink = _buildPinkForm(roster.namesBySection);
   props.setProperty(_PROP_PINK, pink.getId());
 
   ss.toast('Building Late Check-In form…', 'Form Builder', -1);
@@ -65,7 +59,7 @@ function buildAllForms() {
   props.setProperty(_PROP_LATE, late.getId());
 
   ss.toast('Building Yellow Sheet form…', 'Form Builder', -1);
-  var yellow = _buildYellowForm(roster.allNames);
+  var yellow = _buildYellowForm(roster.namesBySection);
   props.setProperty(_PROP_YELLOW, yellow.getId());
 
   // Install per-form triggers now that IDs are saved
@@ -102,15 +96,15 @@ function logFormUrls() {
  *
  * Questions:
  *   1. Your Full Name      — LIST  (roster)
- *   2. Ensemble            — LIST  (FORM_CONFIG.ENSEMBLE_CHOICES)
- *   3. Your Section        — LIST  (SECTION_TABS)
- *   4. Date of Absence     — DATE
- *   5. Reason              — PARAGRAPH
+ *   2. Your Section        — LIST  (SECTION_TABS)
+ *   3. Date of Absence     — DATE
+ *   4. Reason              — PARAGRAPH
  *
  * @param {string[]} allNames  Sorted active-member full names.
  * @returns {GoogleAppsScript.Forms.Form}
  */
-function _buildPinkForm(allNames) {
+function _buildPinkForm(namesBySection) {
+  var sectionTabs = getConfiguredSectionTabs();
   var form = FormApp.create('KSUMB Pink Sheet Request');
   form.setDescription(
     'Use this form to request an excused absence from a KSUMB rehearsal or event. ' +
@@ -119,23 +113,20 @@ function _buildPinkForm(allNames) {
   form.setCollectEmail(false);
   form.setLimitOneResponsePerUser(false);
 
-  var nameItem = form.addListItem();
-  nameItem.setTitle('Your Full Name').setRequired(true);
-  if (allNames.length > 0) nameItem.setChoiceValues(allNames);
+  var sectionQuestion = _addSectionQuestion(form);
+  var pageMap = {};
+  for (var i = 0; i < sectionTabs.length; i++) {
+    var section = sectionTabs[i];
+    pageMap[section] = form.addPageBreakItem();
+    _addSectionPage(form, section, namesBySection[section] || [], pageMap[section], function(sectionForm) {
+      var dateItem = sectionForm.addDateItem();
+      dateItem.setTitle('Date of Absence').setRequired(true);
 
-  var ensembleItem = form.addListItem();
-  ensembleItem.setTitle('Ensemble').setRequired(true);
-  ensembleItem.setChoiceValues(FORM_CONFIG.ENSEMBLE_CHOICES);
-
-  var sectionItem = form.addListItem();
-  sectionItem.setTitle('Your Section').setRequired(true);
-  sectionItem.setChoiceValues(SECTION_TABS);
-
-  var dateItem = form.addDateItem();
-  dateItem.setTitle('Date of Absence').setRequired(true);
-
-  var reasonItem = form.addParagraphTextItem();
-  reasonItem.setTitle('Reason').setRequired(true);
+      var reasonItem = sectionForm.addParagraphTextItem();
+      reasonItem.setTitle('Reason').setRequired(true);
+    });
+  }
+  _setSectionChoices(sectionQuestion, sectionTabs, pageMap);
 
   return form;
 }
@@ -158,44 +149,29 @@ function _buildPinkForm(allNames) {
  * @returns {GoogleAppsScript.Forms.Form}
  */
 function _buildLateForm(namesBySection) {
+  var sectionTabs = getConfiguredSectionTabs();
+  var lateReasons = getConfiguredLateReasons();
   var form = FormApp.create('KSUMB Late Check-In');
   form.setDescription('Arrived late to rehearsal? Submit this form immediately upon arrival.');
   form.setCollectEmail(false);
   form.setLimitOneResponsePerUser(false);
 
   // First question — section picker; choices will be set after pages are created
-  var sectionQuestion = form.addMultipleChoiceItem();
-  sectionQuestion.setTitle('What is your section?').setRequired(true);
+  var sectionQuestion = _addSectionQuestion(form);
+  var pageMap = {};
+  for (var t = 0; t < sectionTabs.length; t++) {
+    var section = sectionTabs[t];
+    pageMap[section] = form.addPageBreakItem();
+    _addSectionPage(form, section, namesBySection[section] || [], pageMap[section], function(sectionForm) {
+      var reasonItem = sectionForm.addMultipleChoiceItem();
+      reasonItem.setTitle('Reason for late arrival').setRequired(true);
+      reasonItem.setChoiceValues(lateReasons);
 
-  // Create one page per section, collect page references for routing
-  var sectionPages = {};
-  for (var t = 0; t < SECTION_TABS.length; t++) {
-    var section = SECTION_TABS[t];
-
-    var page = form.addPageBreakItem();
-    page.setTitle(section + ' \u2014 Select Your Name'); // em dash matches inspectFormQuestions output
-
-    var nameItem = form.addListItem();
-    nameItem.setTitle('Your Name').setRequired(true);
-    var sectionNames = namesBySection[section] || [];
-    nameItem.setChoiceValues(sectionNames.length > 0 ? sectionNames : ['(no members)']);
-
-    var reasonItem = form.addMultipleChoiceItem();
-    reasonItem.setTitle('Reason for late arrival').setRequired(true);
-    reasonItem.setChoiceValues(FORM_CONFIG.LATE_REASONS);
-
-    var otherItem = form.addTextItem();
-    otherItem.setTitle('If \u201cOther\u201d, please explain:'); // curly quotes
-
-    sectionPages[section] = page;
+      var otherItem = sectionForm.addTextItem();
+      otherItem.setTitle('If \u201cOther\u201d, please explain:');
+    });
   }
-
-  // Wire routing: each section choice navigates to that section's page
-  var choices = [];
-  for (var s = 0; s < SECTION_TABS.length; s++) {
-    choices.push(sectionQuestion.createChoice(SECTION_TABS[s], sectionPages[SECTION_TABS[s]]));
-  }
-  sectionQuestion.setChoices(choices);
+  _setSectionChoices(sectionQuestion, sectionTabs, pageMap);
 
   return form;
 }
@@ -205,17 +181,17 @@ function _buildLateForm(namesBySection) {
  *
  * Questions:
  *   1. Your Full Name        — LIST      (roster)
- *   2. Ensemble              — LIST      (FORM_CONFIG.ENSEMBLE_CHOICES)
- *   3. Your Section          — LIST      (SECTION_TABS)
- *   4. Conflict Days         — CHECKBOX  (FORM_CONFIG.CONFLICT_DAYS)
- *   5. Conflict Start Time   — TIME
- *   6. Conflict End Time     — TIME
- *   7. Notes                 — PARAGRAPH (optional)
+ *   2. Your Section          — LIST      (SECTION_TABS)
+ *   3. Conflict Days         — CHECKBOX  (FORM_CONFIG.CONFLICT_DAYS)
+ *   4. Conflict Start Time   — TIME
+ *   5. Conflict End Time     — TIME
+ *   6. Notes                 — PARAGRAPH (optional)
  *
  * @param {string[]} allNames  Sorted active-member full names.
  * @returns {GoogleAppsScript.Forms.Form}
  */
-function _buildYellowForm(allNames) {
+function _buildYellowForm(namesBySection) {
+  var sectionTabs = getConfiguredSectionTabs();
   var form = FormApp.create('KSUMB Yellow Sheet (Class Conflict)');
   form.setDescription(
     'Use this form to report a recurring class conflict with KSUMB rehearsal. ' +
@@ -223,31 +199,30 @@ function _buildYellowForm(allNames) {
   );
   form.setCollectEmail(false);
   form.setLimitOneResponsePerUser(false);
+  form.setAllowResponseEdits(true);
 
-  var nameItem = form.addListItem();
-  nameItem.setTitle('Your Full Name').setRequired(true);
-  if (allNames.length > 0) nameItem.setChoiceValues(allNames);
+  var sectionQuestion = _addSectionQuestion(form);
+  var pageMap = {};
+  for (var i = 0; i < sectionTabs.length; i++) {
+    var section = sectionTabs[i];
+    pageMap[section] = form.addPageBreakItem();
+    _addSectionPage(form, section, namesBySection[section] || [], pageMap[section], function(sectionForm) {
+      var daysItem = sectionForm.addCheckboxItem();
+      daysItem.setTitle('Conflict Days').setRequired(true);
+      daysItem.setChoiceValues(FORM_CONFIG.CONFLICT_DAYS);
 
-  var ensembleItem = form.addListItem();
-  ensembleItem.setTitle('Ensemble').setRequired(true);
-  ensembleItem.setChoiceValues(FORM_CONFIG.ENSEMBLE_CHOICES);
+      var startItem = sectionForm.addTimeItem();
+      startItem.setTitle('Conflict Start Time').setRequired(true);
 
-  var sectionItem = form.addListItem();
-  sectionItem.setTitle('Your Section').setRequired(true);
-  sectionItem.setChoiceValues(SECTION_TABS);
+      var endItem = sectionForm.addTimeItem();
+      endItem.setTitle('Conflict End Time').setRequired(true);
 
-  var daysItem = form.addCheckboxItem();
-  daysItem.setTitle('Conflict Days').setRequired(true);
-  daysItem.setChoiceValues(FORM_CONFIG.CONFLICT_DAYS);
-
-  var startItem = form.addTimeItem();
-  startItem.setTitle('Conflict Start Time').setRequired(true);
-
-  var endItem = form.addTimeItem();
-  endItem.setTitle('Conflict End Time').setRequired(true);
-
-  var notesItem = form.addParagraphTextItem();
-  notesItem.setTitle('Notes'); // optional
+      var notesItem = sectionForm.addParagraphTextItem();
+      notesItem.setTitle('Notes');
+      notesItem.setHelpText('Include the class number and professor (e.g., "MUSIC 285 — Dr. Smith").');
+    });
+  }
+  _setSectionChoices(sectionQuestion, sectionTabs, pageMap);
 
   return form;
 }
@@ -261,39 +236,95 @@ function _buildYellowForm(allNames) {
  * that choice values be unique within a single question.
  * @returns {{ allNames: string[], namesBySection: Object.<string, string[]> }}
  */
+function _addSectionQuestion(form) {
+  var sectionQuestion = form.addMultipleChoiceItem();
+  sectionQuestion.setTitle(FORM_SECTION_QUESTION_TITLE).setRequired(true);
+  return sectionQuestion;
+}
+
+function _setSectionChoices(sectionQuestion, sectionTabs, pageMap) {
+  var choices = [];
+  for (var i = 0; i < sectionTabs.length; i++) {
+    var section = sectionTabs[i];
+    choices.push(sectionQuestion.createChoice(section, pageMap[section]));
+  }
+  sectionQuestion.setChoices(choices);
+}
+
+function _addSectionPage(form, section, sectionNames, pageItem, addFields) {
+  pageItem.setTitle(buildSectionPageTitle(section));
+  pageItem.setGoToPage(FormApp.PageNavigationType.SUBMIT);
+
+  var nameItem = form.addListItem();
+  nameItem.setTitle(FORM_NAME_LIST_TITLE);
+  nameItem.setHelpText(FORM_NAME_LIST_HELP_TEXT);
+  nameItem.setChoiceValues(sectionNames.length > 0 ? sectionNames : ['(no members)']);
+
+  var manualNameItem = form.addTextItem();
+  manualNameItem.setTitle(FORM_MANUAL_NAME_TITLE);
+  manualNameItem.setHelpText(FORM_MANUAL_NAME_HELP_TEXT);
+  manualNameItem.setValidation(_createManualNameValidation());
+
+  addFields(form);
+}
+
+function _createManualNameValidation() {
+  return FormApp.createTextValidation()
+    .requireTextMatchesPattern('^\\s*[^,]+,\\s*[^,].*$')
+    .setHelpText(FORM_MANUAL_NAME_HELP_TEXT)
+    .build();
+}
+
 function _getRosterData() {
-  var data = getTableData('Database');
+  var data = getTableData('Database', {
+    namedRange: 'DATABASE_ROSTER',
+    expectedHeaders: ['Full Name', 'Section'],
+  });
   if (data.length < 2) {
     console.warn('_getRosterData: Database tab is empty or has no data rows.');
-    return { allNames: [], namesBySection: {} };
+    return { allNames: [], namesBySection: {}, ignoredCount: 0 };
   }
 
   var headers = data[0];
   var colFullName = headers.indexOf('Full Name');
   var colSection = headers.indexOf('Section');
+  var colActive = headers.indexOf('Status') !== -1 ? headers.indexOf('Status') : headers.indexOf('Active');
 
   if (colFullName === -1 || colSection === -1) {
-    throw new Error(
-      'Database tab missing "Full Name" or "Section" column. Found: ' + JSON.stringify(headers),
-    );
+    throw new Error('Database tab missing "Full Name" or "Section" column. Found: ' + JSON.stringify(headers));
   }
 
+  var seenPairs = {};
   var seenNames = {};
   var allNames = [];
   var namesBySection = {};
+  var ignoredCount = 0;
 
   for (var i = 1; i < data.length; i++) {
     var fullName = String(data[i][colFullName]).trim();
     var section = String(data[i][colSection]).trim();
-    if (!fullName) continue;
-
-    // Deduplicate across all names (prevents "duplicate choice values" error)
-    if (seenNames[fullName]) {
-      console.warn('_getRosterData: duplicate name skipped — "' + fullName + '"');
+    if (!fullName || !section) {
+      ignoredCount++;
       continue;
     }
-    seenNames[fullName] = true;
-    allNames.push(fullName);
+
+    if (colActive !== -1 && !isRosterMemberActive(data[i][colActive])) {
+      ignoredCount++;
+      continue;
+    }
+
+    var pairKey = section + '||' + fullName;
+    if (seenPairs[pairKey]) {
+      console.warn('_getRosterData: duplicate (section, name) skipped — "' + section + ' | ' + fullName + '"');
+      ignoredCount++;
+      continue;
+    }
+    seenPairs[pairKey] = true;
+
+    if (!seenNames[fullName]) {
+      seenNames[fullName] = true;
+      allNames.push(fullName);
+    }
 
     if (!namesBySection[section]) namesBySection[section] = [];
     namesBySection[section].push(fullName);
@@ -305,8 +336,16 @@ function _getRosterData() {
     namesBySection[sections[s]].sort();
   }
 
-  console.log('_getRosterData: loaded ' + allNames.length + ' member(s) from Database.');
-  return { allNames: allNames, namesBySection: namesBySection };
+  console.log(
+    '_getRosterData: loaded ' +
+      allNames.length +
+      ' unique name(s) across ' +
+      sections.length +
+      ' section(s). Ignored ' +
+      ignoredCount +
+      ' row(s).'
+  );
+  return { allNames: allNames, namesBySection: namesBySection, ignoredCount: ignoredCount };
 }
 
 /**
@@ -314,9 +353,15 @@ function _getRosterData() {
  * Run from the Apps Script editor to verify what _getRosterData sees.
  */
 function inspectDatabase() {
-  var data = getTableData('Database');
+  var data = getTableData('Database', {
+    namedRange: 'DATABASE_ROSTER',
+    expectedHeaders: ['Full Name', 'Section'],
+  });
   console.log('Row count (including header): ' + data.length);
-  if (data.length === 0) { console.log('Database tab is completely empty.'); return; }
+  if (data.length === 0) {
+    console.log('Database tab is completely empty.');
+    return;
+  }
   console.log('Headers: ' + JSON.stringify(data[0]));
   var preview = Math.min(data.length, 6);
   for (var i = 1; i < preview; i++) {

@@ -56,26 +56,25 @@
     </style>
   </head>
   <body>
-    <? var options = dateOptions; ?>
-    <? if (options.length === 0) { ?>
-      <p id="no-dates">No rehearsal date columns found.</p>
-      <div class="actions">
-        <button id="cancel-btn" onclick="google.script.host.close()">Close</button>
-      </div>
+    <? var options = dateOptions; ?> <? if (options.length === 0) { ?>
+    <p id="no-dates">No rehearsal date columns found.</p>
+    <div class="actions">
+      <button id="cancel-btn" onclick="google.script.host.close()">Close</button>
+    </div>
     <? } else { ?>
-      <label for="date-select">Select Date to Delete</label>
-      <select id="date-select">
-        <? for (var i = 0; i < options.length; i++) { ?>
-          <option value="<?= options[i] ?>"><?= options[i] ?></option>
-        <? } ?>
-      </select>
+    <label for="date-select">Select Date to Delete</label>
+    <select id="date-select">
+      <? for (var i = 0; i < options.length; i++) { ?>
+      <option value="<?= options[i] ?>"><?= options[i] ?></option>
+      <? } ?>
+    </select>
 
-      <div id="error"></div>
+    <div id="error"></div>
 
-      <div class="actions">
-        <button id="cancel-btn" onclick="google.script.host.close()">Cancel</button>
-        <button id="delete-btn" onclick="submitDelete()">Delete Date</button>
-      </div>
+    <div class="actions">
+      <button id="cancel-btn" onclick="google.script.host.close()">Cancel</button>
+      <button id="delete-btn" onclick="submitDelete()">Delete Date</button>
+    </div>
     <? } ?>
 
     <script>

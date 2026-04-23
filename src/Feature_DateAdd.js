@@ -6,18 +6,14 @@
  */
 function addRehearsalDate() {
   var config = getConfig();
-  var defaultTime = config["REHEARSAL_START_TIME"] || "15:30";
+  var defaultTime = config[CONFIG_KEYS.REHEARSAL_START_TIME] || DEFAULT_CONFIG_VALUES[CONFIG_KEYS.REHEARSAL_START_TIME];
 
-  var template = HtmlService.createTemplateFromFile("DateAddDialog");
+  var template = HtmlService.createTemplateFromFile('DateAddDialog');
   template.defaultTime = defaultTime;
 
-  var html = template
-    .evaluate()
-    .setWidth(320)
-    .setHeight(220)
-    .setTitle("Add Rehearsal Date");
+  var html = template.evaluate().setWidth(320).setHeight(220).setTitle('Add Rehearsal Date');
 
-  SpreadsheetApp.getUi().showModalDialog(html, "Add Rehearsal Date");
+  SpreadsheetApp.getUi().showModalDialog(html, 'Add Rehearsal Date');
 }
 
 /**
@@ -35,7 +31,7 @@ function parseDateHeader(headerValue) {
     return headerValue;
   }
 
-  if (typeof headerValue !== "string" || !headerValue.trim()) {
+  if (typeof headerValue !== 'string' || !headerValue.trim()) {
     return null;
   }
 
@@ -49,7 +45,7 @@ function parseDateHeader(headerValue) {
   var datePart = match[1]; // "3/30"
   var timePart = match[2]; // "3:30 PM"
   var year = new Date().getFullYear();
-  var candidate = new Date(datePart + "/" + year + " " + timePart);
+  var candidate = new Date(datePart + '/' + year + ' ' + timePart);
 
   if (isNaN(candidate.getTime())) return null;
   return candidate;
@@ -64,34 +60,31 @@ function parseDateHeader(headerValue) {
  */
 function insertRehearsalDate(dateString, timeString) {
   // Build the Date object from dialog inputs
-  var parts = dateString.split("-");
+  var parts = dateString.split('-');
   var year = parseInt(parts[0], 10);
   var month = parseInt(parts[1], 10) - 1;
   var day = parseInt(parts[2], 10);
 
-  var timeParts = timeString.split(":");
+  var timeParts = timeString.split(':');
   var hours = parseInt(timeParts[0], 10);
   var minutes = parseInt(timeParts[1], 10);
 
   var rehearsalDate = new Date(year, month, day, hours, minutes, 0);
 
   // Format header string: "M/d h:mm a" → e.g. "3/30 3:30 PM"
-  var headerString = Utilities.formatDate(
-    rehearsalDate,
-    "America/Chicago",
-    "M/d h:mm a",
-  );
+  var headerString = Utilities.formatDate(rehearsalDate, getAppTimezone(), 'M/d h:mm a');
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var tabsProcessed = 0;
   var tabsSkipped = 0;
 
-  for (var t = 0; t < SECTION_TABS.length; t++) {
-    var tabName = SECTION_TABS[t];
+  var sectionTabs = getConfiguredSectionTabs();
+  for (var t = 0; t < sectionTabs.length; t++) {
+    var tabName = sectionTabs[t];
     var sheet = ss.getSheetByName(tabName);
 
     if (!sheet) {
-      console.warn("DateAdd: tab not found — " + tabName);
+      console.warn('DateAdd: tab not found — ' + tabName);
       continue;
     }
 
@@ -99,8 +92,22 @@ function insertRehearsalDate(dateString, timeString) {
     var lastRow = sheet.getLastRow();
 
     // Read header row (row 1)
-    var headers =
-      lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
+    var headers = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
+
+    // If an example placeholder column exists, rename its header in place
+    // to preserve the data validation rules attached to that column.
+    var exampleCol = -1;
+    for (var ec = 1; ec < headers.length; ec++) {
+      if (String(headers[ec]).trim() === EXAMPLE_DATE_HEADER) {
+        exampleCol = ec + 1;
+        break;
+      }
+    }
+    if (exampleCol !== -1) {
+      sheet.getRange(1, exampleCol).setValue(headerString);
+      tabsProcessed++;
+      continue;
+    }
 
     // Date columns start at col 2 (col 1 = Name)
     var dateHeaders = [];
@@ -120,12 +127,7 @@ function insertRehearsalDate(dateString, timeString) {
       }
     }
     if (isDuplicate) {
-      console.log(
-        "DateAdd: skipping " +
-          tabName +
-          " — column already exists for " +
-          headerString,
-      );
+      console.log('DateAdd: skipping ' + tabName + ' — column already exists for ' + headerString);
       tabsSkipped++;
       continue;
     }
@@ -144,8 +146,7 @@ function insertRehearsalDate(dateString, timeString) {
 
     if (insertCol === -1) {
       // Append after the last date column (or after col 1 if no date columns exist)
-      var afterCol =
-        dateHeaders.length > 0 ? dateHeaders[dateHeaders.length - 1].col : 1;
+      var afterCol = dateHeaders.length > 0 ? dateHeaders[dateHeaders.length - 1].col : 1;
       sheet.insertColumnAfter(afterCol);
       newCol = afterCol + 1;
       copyFromCol = dateHeaders.length > 0 ? afterCol : -1;
@@ -165,35 +166,22 @@ function insertRehearsalDate(dateString, timeString) {
       var source = sheet.getRange(2, copyFromCol, lastRow - 1, 1);
       var target = sheet.getRange(2, newCol, lastRow - 1, 1);
       source.copyTo(target, SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
-      source.copyTo(
-        target,
-        SpreadsheetApp.CopyPasteType.PASTE_DATA_VALIDATION,
-        false,
-      );
-    }
-
-    // Fill default attendance value if one is configured
-    var defaultAttVal =
-      PropertiesService.getScriptProperties().getProperty("DEFAULT_ATTENDANCE_VALUE") || "";
-    if (defaultAttVal && lastRow > 1) {
-      var defaultData = [];
-      for (var r = 0; r < lastRow - 1; r++) {
-        defaultData.push([defaultAttVal]);
-      }
-      sheet.getRange(2, newCol, lastRow - 1, 1).setValues(defaultData);
+      source.copyTo(target, SpreadsheetApp.CopyPasteType.PASTE_DATA_VALIDATION, false);
     }
 
     tabsProcessed++;
   }
 
   SpreadsheetApp.flush();
+  processPinkSheetsForDate(rehearsalDate);
+  processPendingLateCheckInsForDate(rehearsalDate);
 
-  var message = "Added " + headerString + " to " + tabsProcessed + " tab(s).";
+  var message = 'Added ' + headerString + ' to ' + tabsProcessed + ' tab(s).';
   if (tabsSkipped > 0) {
-    message += " Skipped " + tabsSkipped + " (already existed).";
+    message += ' Skipped ' + tabsSkipped + ' (already existed).';
   }
-  ss.toast(message, "DateAdd Complete");
-  console.log("DateAdd: " + message);
+  ss.toast(message, 'DateAdd Complete');
+  console.log('DateAdd: ' + message);
 }
 
 // ─── Delete Rehearsal Date ────────────────────────────────────────────────────
@@ -206,8 +194,9 @@ function openDeleteDateDialog() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var dateOptions = [];
 
-  for (var t = 0; t < SECTION_TABS.length; t++) {
-    var sheet = ss.getSheetByName(SECTION_TABS[t]);
+  var sectionTabs = getConfiguredSectionTabs();
+  for (var t = 0; t < sectionTabs.length; t++) {
+    var sheet = ss.getSheetByName(sectionTabs[t]);
     if (!sheet) continue;
 
     var lastCol = sheet.getLastColumn();
@@ -232,11 +221,11 @@ function openDeleteDateDialog() {
     return o.label;
   });
 
-  var template = HtmlService.createTemplateFromFile("DateDeleteDialog");
+  var template = HtmlService.createTemplateFromFile('DateDeleteDialog');
   template.dateOptions = labels;
 
-  var html = template.evaluate().setWidth(320).setHeight(185).setTitle("Delete Rehearsal Date");
-  SpreadsheetApp.getUi().showModalDialog(html, "Delete Rehearsal Date");
+  var html = template.evaluate().setWidth(320).setHeight(185).setTitle('Delete Rehearsal Date');
+  SpreadsheetApp.getUi().showModalDialog(html, 'Delete Rehearsal Date');
 }
 
 /**
@@ -249,9 +238,11 @@ function deleteRehearsalDate(headerString) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var tabsProcessed = 0;
   var tabsSkipped = 0;
+  var deletedDate = parseDateHeader(headerString);
 
-  for (var t = 0; t < SECTION_TABS.length; t++) {
-    var tabName = SECTION_TABS[t];
+  var sectionTabs = getConfiguredSectionTabs();
+  for (var t = 0; t < sectionTabs.length; t++) {
+    var tabName = sectionTabs[t];
     var sheet = ss.getSheetByName(tabName);
     if (!sheet) continue;
 
@@ -280,13 +271,87 @@ function deleteRehearsalDate(headerString) {
   }
 
   SpreadsheetApp.flush();
-
-  var message = 'Deleted "' + headerString + '" from ' + tabsProcessed + " tab(s).";
-  if (tabsSkipped > 0) {
-    message += " " + tabsSkipped + " tab(s) did not have this column.";
+  if (deletedDate) {
+    resetQueuesForDeletedDate(deletedDate);
   }
-  ss.toast(message, "Delete Complete");
-  console.log("DateDelete: " + message);
+
+  var message = 'Deleted "' + headerString + '" from ' + tabsProcessed + ' tab(s).';
+  if (tabsSkipped > 0) {
+    message += ' ' + tabsSkipped + ' tab(s) did not have this column.';
+  }
+  ss.toast(message, 'Delete Complete');
+  console.log('DateDelete: ' + message);
+}
+
+/**
+ * Resets Pink Sheet and Late Check-In rows that reference a deleted date so
+ * they can be reprocessed if the date is added again later.
+ *
+ * @param {Date} deletedDate
+ */
+function resetQueuesForDeletedDate(deletedDate) {
+  resetPinkSheetQueueForDeletedDate(deletedDate);
+  resetLateQueueForDeletedDate(deletedDate);
+}
+
+/**
+ * Resets matching Pink Sheet rows to Pending.
+ *
+ * @param {Date} deletedDate
+ */
+function resetPinkSheetQueueForDeletedDate(deletedDate) {
+  var pinkSheet = getSheet('Pink Sheets');
+  var allData = pinkSheet.getDataRange().getValues();
+  if (allData.length < 2) return;
+
+  var headers = allData[0];
+  var headerMap = getPinkSheetHeaderMap(headers);
+  var pendingStatus = getStatusValue('PENDING');
+
+  for (var i = 1; i < allData.length; i++) {
+    var sheetDate =
+      allData[i][headerMap.date] instanceof Date ? allData[i][headerMap.date] : new Date(allData[i][headerMap.date]);
+    if (!shouldResetQueueRowForDeletedDate(sheetDate, deletedDate)) continue;
+
+    pinkSheet.getRange(i + 1, headerMap.status + 1).setValue(pendingStatus);
+    if (headerMap.processedAt !== -1) {
+      pinkSheet.getRange(i + 1, headerMap.processedAt + 1).setValue('');
+    }
+    if (headerMap.error !== -1) {
+      pinkSheet.getRange(i + 1, headerMap.error + 1).setValue('');
+    }
+  }
+}
+
+/**
+ * Resets matching Late Check-In rows to Pending.
+ *
+ * @param {Date} deletedDate
+ */
+function resetLateQueueForDeletedDate(deletedDate) {
+  var lateSheet = getSheet('Late Check-Ins');
+  var allData = lateSheet.getDataRange().getValues();
+  if (allData.length < 2) return;
+
+  var headers = allData[0];
+  var headerMap = getLateCheckInHeaderMap(headers);
+  var pendingStatus = getStatusValue('PENDING');
+
+  for (var i = 1; i < allData.length; i++) {
+    var arrival =
+      allData[i][headerMap.arrivalTime] instanceof Date
+        ? allData[i][headerMap.arrivalTime]
+        : new Date(allData[i][headerMap.arrivalTime]);
+    if (!shouldResetQueueRowForDeletedDate(arrival, deletedDate)) continue;
+
+    lateSheet.getRange(i + 1, headerMap.status + 1).setValue(pendingStatus);
+    if (headerMap.processedAt !== -1) {
+      lateSheet.getRange(i + 1, headerMap.processedAt + 1).setValue('');
+    }
+    if (headerMap.error !== -1) {
+      lateSheet.getRange(i + 1, headerMap.error + 1).setValue('');
+    }
+  }
 }
 
 // ─── Default Attendance Value ─────────────────────────────────────────────────
@@ -295,14 +360,13 @@ function deleteRehearsalDate(headerString) {
  * Opens the dialog for viewing and changing the default attendance value.
  */
 function openDefaultAttendanceDialog() {
-  var current =
-    PropertiesService.getScriptProperties().getProperty("DEFAULT_ATTENDANCE_VALUE") || "";
+  var current = PropertiesService.getScriptProperties().getProperty('DEFAULT_ATTENDANCE_VALUE') || '';
 
-  var template = HtmlService.createTemplateFromFile("DefaultAttendanceDialog");
+  var template = HtmlService.createTemplateFromFile('DefaultAttendanceDialog');
   template.currentDefault = current;
 
-  var html = template.evaluate().setWidth(320).setHeight(210).setTitle("Default Attendance Value");
-  SpreadsheetApp.getUi().showModalDialog(html, "Default Attendance Value");
+  var html = template.evaluate().setWidth(320).setHeight(210).setTitle('Default Attendance Value');
+  SpreadsheetApp.getUi().showModalDialog(html, 'Default Attendance Value');
 }
 
 /**
@@ -312,8 +376,5 @@ function openDefaultAttendanceDialog() {
  * @param {string} value - The default value to fill into new date columns (empty string = blank).
  */
 function setDefaultAttendanceValue(value) {
-  PropertiesService.getScriptProperties().setProperty(
-    "DEFAULT_ATTENDANCE_VALUE",
-    value == null ? "" : String(value),
-  );
+  PropertiesService.getScriptProperties().setProperty('DEFAULT_ATTENDANCE_VALUE', value == null ? '' : String(value));
 }

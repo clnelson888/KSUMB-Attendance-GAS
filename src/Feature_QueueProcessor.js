@@ -10,39 +10,23 @@
  */
 function processApprovedRequests() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  ss.toast("Processing approved requests...", "Please wait");
+  ss.toast('Processing approved requests...', 'Please wait');
 
-  var lateCount = processApprovedLateCheckIns(ss);
   var pinkCount = processApprovedPinkSheets(ss);
   var yellowCount = processApprovedYellowSheets(ss);
 
   SpreadsheetApp.flush();
 
-  var total = lateCount + pinkCount + yellowCount;
+  var total = pinkCount + yellowCount;
   if (total === 0) {
-    ss.toast("No approved requests to process.", "Queue Processor");
+    ss.toast('No approved requests to process.', 'Queue Processor');
   } else {
     ss.toast(
-      "Processed " +
-        total +
-        " request(s): " +
-        lateCount +
-        " late, " +
-        pinkCount +
-        " pink, " +
-        yellowCount +
-        " yellow.",
-      "Queue Processor",
+      'Processed ' + total + ' request(s): ' + pinkCount + ' pink, ' + yellowCount + ' yellow.',
+      'Queue Processor'
     );
   }
-  console.log(
-    "QueueProcessor: late=" +
-      lateCount +
-      " pink=" +
-      pinkCount +
-      " yellow=" +
-      yellowCount,
-  );
+  console.log('QueueProcessor: pink=' + pinkCount + ' yellow=' + yellowCount);
 }
 
 // ---------------------------------------------------------------------------
@@ -51,22 +35,37 @@ function processApprovedRequests() {
 
 /**
  * Finds the 0-based column index in a header row whose date matches the
- * target date (M/d comparison only — ignores time).
+ * target date. Matches on calendar date (M/d) first, then — when multiple
+ * columns share the same date (e.g., two rehearsals on the same day) —
+ * picks the one whose time-of-day is closest to the target's time-of-day.
+ *
+ * This lets Late Check-Ins land on the rehearsal the student was actually
+ * arriving at, rather than always the earliest slot of the day.
  *
  * @param {Array} headers - Row 0 from the section tab (mixed Date/string values).
- * @param {Date} targetDate - The date to match against.
+ * @param {Date} targetDate - The date (and time) to match against.
  * @returns {number} 0-based column index, or -1 if not found.
  */
 function matchDateColumn(headers, targetDate) {
-  var targetMd = Utilities.formatDate(targetDate, "America/Chicago", "M/d");
+  var tz = getAppTimezone();
+  var targetMd = Utilities.formatDate(targetDate, tz, 'M/d');
+  var targetMinutes = targetDate.getHours() * 60 + targetDate.getMinutes();
 
+  var bestCol = -1;
+  var bestDiff = Infinity;
   for (var c = 1; c < headers.length; c++) {
     var parsed = parseDateHeader(headers[c]);
     if (!parsed) continue;
-    var headerMd = Utilities.formatDate(parsed, "America/Chicago", "M/d");
-    if (headerMd === targetMd) return c;
+    if (Utilities.formatDate(parsed, tz, 'M/d') !== targetMd) continue;
+
+    var headerMinutes = parsed.getHours() * 60 + parsed.getMinutes();
+    var diff = Math.abs(headerMinutes - targetMinutes);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      bestCol = c;
+    }
   }
-  return -1;
+  return bestCol;
 }
 
 // ---------------------------------------------------------------------------
@@ -81,32 +80,26 @@ function matchDateColumn(headers, targetDate) {
  * @returns {number} Number of rows processed.
  */
 function processApprovedLateCheckIns(ss) {
-  var tabData = getTableDataWithHeaders("Late Check-Ins");
+  var tabData = getTableDataWithHeaders('Late Check-Ins');
   var headers = tabData.headers;
   var rows = tabData.data;
 
-  var colName = headers.indexOf("Full Name");
-  var colSection = headers.indexOf("Section");
-  var colArrival = headers.indexOf("Arrival Time");
-  var colStatus = headers.indexOf("Status");
+  var colName = headers.indexOf('Full Name');
+  var colSection = headers.indexOf('Section');
+  var colArrival = headers.indexOf('Arrival Time');
+  var colStatus = headers.indexOf('Status');
 
-  if (
-    colName === -1 ||
-    colSection === -1 ||
-    colArrival === -1 ||
-    colStatus === -1
-  ) {
-    console.error(
-      "LateCheckIns: missing required columns. Found: " +
-        JSON.stringify(headers),
-    );
+  if (colName === -1 || colSection === -1 || colArrival === -1 || colStatus === -1) {
+    console.error('LateCheckIns: missing required columns. Found: ' + JSON.stringify(headers));
     return 0;
   }
 
   // Collect approved rows with their original row indices (1-based, offset by header)
   var approved = [];
+  var approvedStatus = getStatusValue('APPROVED');
+  var completeStatus = getStatusValue('COMPLETE');
   for (var i = 0; i < rows.length; i++) {
-    if (String(rows[i][colStatus]).trim() === "Approved") {
+    if (String(rows[i][colStatus]).trim() === approvedStatus) {
       approved.push({
         rowIndex: i + 2, // 1-based sheet row (header=1, first data=2)
         name: String(rows[i][colName]).trim(),
@@ -119,26 +112,17 @@ function processApprovedLateCheckIns(ss) {
   if (approved.length === 0) return 0;
 
   // Group by section
-  var bySection = groupByKey(approved, "section");
+  var bySection = groupByKey(approved, 'section');
 
   // Process each section
-  var processed = applyAttendanceUpdates(
-    ss,
-    bySection,
-    "Tardy",
-    function (item) {
-      return item.arrival instanceof Date
-        ? item.arrival
-        : new Date(item.arrival);
-    },
-  );
+  var processed = applyAttendanceUpdates(ss, bySection, getAttendanceValue('TARDY'), function (item) {
+    return item.arrival instanceof Date ? item.arrival : new Date(item.arrival);
+  });
 
   // Mark processed rows as Completed
-  var lateSheet = getSheet("Late Check-Ins");
+  var lateSheet = getSheet('Late Check-Ins');
   for (var j = 0; j < approved.length; j++) {
-    lateSheet
-      .getRange(approved[j].rowIndex, colStatus + 1)
-      .setValue("Completed");
+    lateSheet.getRange(approved[j].rowIndex, colStatus + 1).setValue(completeStatus);
   }
 
   return processed;
@@ -156,60 +140,7 @@ function processApprovedLateCheckIns(ss) {
  * @returns {number} Number of rows processed.
  */
 function processApprovedPinkSheets(ss) {
-  var tabData = getTableDataWithHeaders("Pink Sheets");
-  var headers = tabData.headers;
-  var rows = tabData.data;
-
-  var colName = headers.indexOf("Full Name");
-  var colSection = headers.indexOf("Section");
-  var colDate = headers.indexOf("Date");
-  var colStatus = headers.indexOf("Status");
-
-  if (
-    colName === -1 ||
-    colSection === -1 ||
-    colDate === -1 ||
-    colStatus === -1
-  ) {
-    console.error(
-      "PinkSheets: missing required columns. Found: " + JSON.stringify(headers),
-    );
-    return 0;
-  }
-
-  var approved = [];
-  for (var i = 0; i < rows.length; i++) {
-    if (String(rows[i][colStatus]).trim() === "Approved") {
-      approved.push({
-        rowIndex: i + 2,
-        name: String(rows[i][colName]).trim(),
-        section: String(rows[i][colSection]).trim(),
-        date: rows[i][colDate],
-      });
-    }
-  }
-
-  if (approved.length === 0) return 0;
-
-  var bySection = groupByKey(approved, "section");
-
-  var processed = applyAttendanceUpdates(
-    ss,
-    bySection,
-    "Excused",
-    function (item) {
-      return item.date instanceof Date ? item.date : new Date(item.date);
-    },
-  );
-
-  var pinkSheet = getSheet("Pink Sheets");
-  for (var j = 0; j < approved.length; j++) {
-    pinkSheet
-      .getRange(approved[j].rowIndex, colStatus + 1)
-      .setValue("Completed");
-  }
-
-  return processed;
+  return processPinkSheetActions(ss);
 }
 
 // ---------------------------------------------------------------------------
@@ -217,122 +148,15 @@ function processApprovedPinkSheets(ss) {
 // ---------------------------------------------------------------------------
 
 /**
- * Processes all approved Yellow Sheet rows.
- * Adds a class-conflict note to the student's Name cell in their section tab.
- * Marks rows as "Completed".
+ * Processes all actionable Yellow Sheet rows. Delegates to the single-row
+ * processor in Feature_YellowSheets, which handles note aggregation across
+ * every Yellow Sheet a student currently has on file.
  *
- * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ss - The active spreadsheet.
- * @returns {number} Number of rows processed.
+ * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ss
+ * @returns {number}
  */
 function processApprovedYellowSheets(ss) {
-  var tabData = getTableDataWithHeaders("Yellow Sheets");
-  var headers = tabData.headers;
-  var rows = tabData.data;
-
-  var colName = headers.indexOf("Full Name");
-  var colSection = headers.indexOf("Section");
-  var colDays = headers.indexOf("Conflict Days");
-  var colStart = headers.indexOf("Start Time");
-  var colEnd = headers.indexOf("End Time");
-  var colStatus = headers.indexOf("Status");
-
-  if (
-    colName === -1 ||
-    colSection === -1 ||
-    colDays === -1 ||
-    colStatus === -1
-  ) {
-    console.error(
-      "YellowSheets: missing required columns. Found: " +
-        JSON.stringify(headers),
-    );
-    return 0;
-  }
-
-  var approved = [];
-  for (var i = 0; i < rows.length; i++) {
-    if (String(rows[i][colStatus]).trim() === "Approved") {
-      approved.push({
-        rowIndex: i + 2,
-        name: String(rows[i][colName]).trim(),
-        section: String(rows[i][colSection]).trim(),
-        days: String(rows[i][colDays]).trim(),
-        startTime: colStart !== -1 ? rows[i][colStart] : "",
-        endTime: colEnd !== -1 ? rows[i][colEnd] : "",
-      });
-    }
-  }
-
-  if (approved.length === 0) return 0;
-
-  var bySection = groupByKey(approved, "section");
-  var processed = 0;
-
-  var sectionNames = Object.keys(bySection);
-  for (var s = 0; s < sectionNames.length; s++) {
-    var sectionName = sectionNames[s];
-    var items = bySection[sectionName];
-    var sheet = ss.getSheetByName(sectionName);
-
-    if (!sheet) {
-      console.warn("YellowSheets: section tab not found — " + sectionName);
-      continue;
-    }
-
-    // Read column A for name lookup
-    var lastRow = sheet.getLastRow();
-    if (lastRow < 2) continue;
-    var nameCol = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-    var nameMap = {};
-    for (var n = 0; n < nameCol.length; n++) {
-      nameMap[String(nameCol[n][0]).trim()] = n + 2; // 1-based sheet row
-    }
-
-    for (var k = 0; k < items.length; k++) {
-      var item = items[k];
-      var sheetRow = nameMap[item.name];
-      if (!sheetRow) {
-        console.warn(
-          "YellowSheets: student not found in " +
-            sectionName +
-            " — " +
-            item.name,
-        );
-        continue;
-      }
-
-      // Build note text
-      var noteText = "Class conflict: " + item.days;
-      if (item.startTime || item.endTime) {
-        var startStr = formatTimeValue(item.startTime);
-        var endStr = formatTimeValue(item.endTime);
-        if (startStr && endStr) {
-          noteText += " " + startStr + "-" + endStr;
-        }
-      }
-
-      // Append to any existing note on the Name cell
-      var nameCell = sheet.getRange(sheetRow, 1);
-      var existing = nameCell.getNote();
-      if (existing) {
-        nameCell.setNote(existing + "\n" + noteText);
-      } else {
-        nameCell.setNote(noteText);
-      }
-
-      processed++;
-    }
-  }
-
-  // Mark processed rows as Completed
-  var yellowSheet = getSheet("Yellow Sheets");
-  for (var j = 0; j < approved.length; j++) {
-    yellowSheet
-      .getRange(approved[j].rowIndex, colStatus + 1)
-      .setValue("Completed");
-  }
-
-  return processed;
+  return processYellowSheetActions(ss);
 }
 
 // ---------------------------------------------------------------------------
@@ -376,7 +200,7 @@ function applyAttendanceUpdates(ss, bySection, attendanceValue, getDate) {
     var sheet = ss.getSheetByName(sectionName);
 
     if (!sheet) {
-      console.warn("QueueProcessor: section tab not found — " + sectionName);
+      console.warn('QueueProcessor: section tab not found — ' + sectionName);
       continue;
     }
 
@@ -400,28 +224,23 @@ function applyAttendanceUpdates(ss, bySection, attendanceValue, getDate) {
       var item = items[k];
       var rowIdx = nameMap[item.name];
       if (rowIdx === undefined) {
-        console.warn(
-          "QueueProcessor: student not found in " +
-            sectionName +
-            " — " +
-            item.name,
-        );
+        console.warn('QueueProcessor: student not found in ' + sectionName + ' — ' + item.name);
         continue;
       }
 
       var targetDate = getDate(item);
       if (!targetDate || isNaN(targetDate.getTime())) {
-        console.warn("QueueProcessor: invalid date for " + item.name);
+        console.warn('QueueProcessor: invalid date for ' + item.name);
         continue;
       }
 
       var colIdx = matchDateColumn(sectionHeaders, targetDate);
       if (colIdx === -1) {
         console.warn(
-          "QueueProcessor: no matching date column for " +
+          'QueueProcessor: no matching date column for ' +
             item.name +
-            " on " +
-            Utilities.formatDate(targetDate, "America/Chicago", "M/d"),
+            ' on ' +
+            Utilities.formatDate(targetDate, getAppTimezone(), 'M/d')
         );
         continue;
       }
@@ -436,9 +255,7 @@ function applyAttendanceUpdates(ss, bySection, attendanceValue, getDate) {
       var dateCols = allData.map(function (row) {
         return row.slice(1);
       });
-      sheet
-        .getRange(1, 2, dateCols.length, dateCols[0].length)
-        .setValues(dateCols);
+      sheet.getRange(1, 2, dateCols.length, dateCols[0].length).setValues(dateCols);
     }
   }
 
@@ -452,9 +269,10 @@ function applyAttendanceUpdates(ss, bySection, attendanceValue, getDate) {
  * @returns {string} Formatted time string (e.g., "2:30 PM"), or empty string.
  */
 function formatTimeValue(timeValue) {
-  if (!timeValue) return "";
+  if (!timeValue) return '';
   if (timeValue instanceof Date) {
-    return Utilities.formatDate(timeValue, "America/Chicago", "h:mm a");
+    return Utilities.formatDate(timeValue, getAppTimezone(), 'h:mm a');
   }
   return String(timeValue).trim();
 }
+
