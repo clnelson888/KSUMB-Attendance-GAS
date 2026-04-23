@@ -9,7 +9,7 @@
 function getDatabaseRosterBySection() {
   var data = getTableData('Database', {
     namedRange: 'DATABASE_ROSTER',
-    expectedHeaders: ['Full Name', 'Section', 'Active'],
+    expectedHeaders: ['Full Name', 'Section'],
   });
   if (data.length < 2) {
     return { bySection: {}, ignoredCount: 0 };
@@ -18,11 +18,12 @@ function getDatabaseRosterBySection() {
   var headers = data[0];
   var colFullName = headers.indexOf('Full Name');
   var colSection = headers.indexOf('Section');
-  var colActive = headers.indexOf('Active');
+  // Accept either "Status" (current DB schema) or legacy "Active"
+  var colActive = headers.indexOf('Status') !== -1 ? headers.indexOf('Status') : headers.indexOf('Active');
 
-  if (colFullName === -1 || colSection === -1 || colActive === -1) {
+  if (colFullName === -1 || colSection === -1) {
     throw new Error(
-      'Database tab missing columns. Expected: Full Name, Section, Active. Got: ' + JSON.stringify(headers)
+      'Database tab missing columns. Expected: Full Name, Section. Got: ' + JSON.stringify(headers)
     );
   }
 
@@ -36,7 +37,7 @@ function getDatabaseRosterBySection() {
     members.push({
       fullName: fullName,
       section: section,
-      active: data[i][colActive],
+      active: colActive !== -1 ? data[i][colActive] : true,
     });
   }
 

@@ -23,7 +23,9 @@ function getPinkSheetHeaderMap(headers) {
 }
 
 /**
- * Writes the queue outcome for a Pink Sheet row.
+ * Writes the queue outcome for a Pink Sheet row. Status, Approved At, and
+ * Denied At are only written when the outcome carries a truthy value, so
+ * repeat runs preserve the staff decision and the first-set timestamps.
  *
  * @param {GoogleAppsScript.Spreadsheet.Sheet} pinkSheet
  * @param {Object} headerMap
@@ -31,18 +33,20 @@ function getPinkSheetHeaderMap(headers) {
  * @param {Object} outcome
  */
 function writePinkSheetOutcome(pinkSheet, headerMap, rowIndex, outcome) {
-  pinkSheet.getRange(rowIndex, headerMap.status + 1).setValue(outcome.statusValue);
+  if (outcome.statusValue) {
+    pinkSheet.getRange(rowIndex, headerMap.status + 1).setValue(outcome.statusValue);
+  }
 
-  if (headerMap.approvedAt !== -1 && outcome.approvedAt != null && outcome.approvedAt !== '') {
+  if (headerMap.approvedAt !== -1 && outcome.approvedAt) {
     pinkSheet.getRange(rowIndex, headerMap.approvedAt + 1).setValue(outcome.approvedAt);
   }
 
-  if (headerMap.deniedAt !== -1 && outcome.deniedAt != null && outcome.deniedAt !== '') {
+  if (headerMap.deniedAt !== -1 && outcome.deniedAt) {
     pinkSheet.getRange(rowIndex, headerMap.deniedAt + 1).setValue(outcome.deniedAt);
   }
 
-  if (headerMap.processedAt !== -1) {
-    pinkSheet.getRange(rowIndex, headerMap.processedAt + 1).setValue(outcome.processedAt || '');
+  if (headerMap.processedAt !== -1 && outcome.processedAt) {
+    pinkSheet.getRange(rowIndex, headerMap.processedAt + 1).setValue(outcome.processedAt);
   }
 
   if (headerMap.error !== -1) {
@@ -62,7 +66,6 @@ function processSinglePinkSheet(ss, payload) {
     pending: getStatusValue('PENDING'),
     approved: getStatusValue('APPROVED'),
     denied: getStatusValue('DENIED'),
-    complete: getStatusValue('COMPLETE'),
   };
 
   var sectionSheet = ss.getSheetByName(payload.section);
@@ -132,15 +135,24 @@ function processSinglePinkSheet(ss, payload) {
   var approvedAt = payload.approvedAt instanceof Date ? payload.approvedAt : null;
   var deniedAt = payload.deniedAt instanceof Date ? payload.deniedAt : null;
 
-  if (payload.status === statuses.approved && !approvedAt) approvedAt = now;
-  if (payload.status === statuses.denied && !deniedAt) deniedAt = now;
+  // First-set-wins: stamp the transition timestamp only when currently missing.
+  var newApprovedAtStamp = '';
+  var newDeniedAtStamp = '';
+  if (payload.status === statuses.approved && !approvedAt) {
+    approvedAt = now;
+    newApprovedAtStamp = now;
+  }
+  if (payload.status === statuses.denied && !deniedAt) {
+    deniedAt = now;
+    newDeniedAtStamp = now;
+  }
 
   if (!hasMatchingDate) {
     return {
       statusValue: action.nextStatus,
-      processedAt: action.nextStatus === statuses.complete ? now : '',
-      approvedAt: approvedAt || '',
-      deniedAt: deniedAt || '',
+      processedAt: '',
+      approvedAt: newApprovedAtStamp,
+      deniedAt: newDeniedAtStamp,
       errorMessage: '',
       updated: false,
     };
@@ -154,21 +166,23 @@ function processSinglePinkSheet(ss, payload) {
   });
   var targetCell = sectionSheet.getRange(studentRow, colIndex + 1);
 
-  if (action.writeAttendance) {
-    targetCell.setValue(action.clearAttendance ? '' : getAttendanceValue('EXCUSED'));
+  if (action.writeAttendance && action.attendanceValue) {
+    var attendanceKey = action.attendanceValue === 'absent' ? 'ABSENT' : 'EXCUSED';
+    targetCell.setValue(getAttendanceValue(attendanceKey));
   }
 
   if (action.writeNote) {
     targetCell.setNote(noteText);
   }
 
+  var updated = action.writeAttendance || action.writeNote;
   return {
     statusValue: action.nextStatus,
-    processedAt: action.nextStatus === statuses.complete ? now : '',
-    approvedAt: approvedAt || '',
-    deniedAt: deniedAt || '',
+    processedAt: updated ? now : '',
+    approvedAt: newApprovedAtStamp,
+    deniedAt: newDeniedAtStamp,
     errorMessage: '',
-    updated: action.writeAttendance || action.writeNote,
+    updated: updated,
   };
 }
 

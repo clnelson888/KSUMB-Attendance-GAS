@@ -288,7 +288,7 @@ function _getRosterData() {
   var headers = data[0];
   var colFullName = headers.indexOf('Full Name');
   var colSection = headers.indexOf('Section');
-  var colActive = headers.indexOf('Active');
+  var colActive = headers.indexOf('Status') !== -1 ? headers.indexOf('Status') : headers.indexOf('Active');
 
   if (colFullName === -1 || colSection === -1) {
     throw new Error('Database tab missing "Full Name" or "Section" column. Found: ' + JSON.stringify(headers));

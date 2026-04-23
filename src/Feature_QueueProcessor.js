@@ -148,109 +148,15 @@ function processApprovedPinkSheets(ss) {
 // ---------------------------------------------------------------------------
 
 /**
- * Processes all approved Yellow Sheet rows.
- * Adds a class-conflict note to the student's Name cell in their section tab.
- * Marks rows as "Completed".
+ * Processes all actionable Yellow Sheet rows. Delegates to the single-row
+ * processor in Feature_YellowSheets, which handles note aggregation across
+ * every Yellow Sheet a student currently has on file.
  *
- * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ss - The active spreadsheet.
- * @returns {number} Number of rows processed.
+ * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ss
+ * @returns {number}
  */
 function processApprovedYellowSheets(ss) {
-  var tabData = getTableDataWithHeaders('Yellow Sheets');
-  var headers = tabData.headers;
-  var rows = tabData.data;
-
-  var colName = headers.indexOf('Full Name');
-  var colSection = headers.indexOf('Section');
-  var colDays = headers.indexOf('Conflict Days');
-  var colStart = headers.indexOf('Start Time');
-  var colEnd = headers.indexOf('End Time');
-  var colStatus = headers.indexOf('Status');
-
-  if (colName === -1 || colSection === -1 || colDays === -1 || colStatus === -1) {
-    console.error('YellowSheets: missing required columns. Found: ' + JSON.stringify(headers));
-    return 0;
-  }
-
-  var approved = [];
-  var approvedStatus = getStatusValue('APPROVED');
-  var completeStatus = getStatusValue('COMPLETE');
-  for (var i = 0; i < rows.length; i++) {
-    if (String(rows[i][colStatus]).trim() === approvedStatus) {
-      approved.push({
-        rowIndex: i + 2,
-        name: String(rows[i][colName]).trim(),
-        section: String(rows[i][colSection]).trim(),
-        days: String(rows[i][colDays]).trim(),
-        startTime: colStart !== -1 ? rows[i][colStart] : '',
-        endTime: colEnd !== -1 ? rows[i][colEnd] : '',
-      });
-    }
-  }
-
-  if (approved.length === 0) return 0;
-
-  var bySection = groupByKey(approved, 'section');
-  var processed = 0;
-
-  var sectionNames = Object.keys(bySection);
-  for (var s = 0; s < sectionNames.length; s++) {
-    var sectionName = sectionNames[s];
-    var items = bySection[sectionName];
-    var sheet = ss.getSheetByName(sectionName);
-
-    if (!sheet) {
-      console.warn('YellowSheets: section tab not found — ' + sectionName);
-      continue;
-    }
-
-    // Read column A for name lookup
-    var lastRow = sheet.getLastRow();
-    if (lastRow < 2) continue;
-    var nameCol = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-    var nameMap = {};
-    for (var n = 0; n < nameCol.length; n++) {
-      nameMap[String(nameCol[n][0]).trim()] = n + 2; // 1-based sheet row
-    }
-
-    for (var k = 0; k < items.length; k++) {
-      var item = items[k];
-      var sheetRow = nameMap[item.name];
-      if (!sheetRow) {
-        console.warn('YellowSheets: student not found in ' + sectionName + ' — ' + item.name);
-        continue;
-      }
-
-      // Build note text
-      var noteText = 'Class conflict: ' + item.days;
-      if (item.startTime || item.endTime) {
-        var startStr = formatTimeValue(item.startTime);
-        var endStr = formatTimeValue(item.endTime);
-        if (startStr && endStr) {
-          noteText += ' ' + startStr + '-' + endStr;
-        }
-      }
-
-      // Append to any existing note on the Name cell
-      var nameCell = sheet.getRange(sheetRow, 1);
-      var existing = nameCell.getNote();
-      if (existing) {
-        nameCell.setNote(existing + '\n' + noteText);
-      } else {
-        nameCell.setNote(noteText);
-      }
-
-      processed++;
-    }
-  }
-
-  // Mark processed rows as Completed
-  var yellowSheet = getSheet('Yellow Sheets');
-  for (var j = 0; j < approved.length; j++) {
-    yellowSheet.getRange(approved[j].rowIndex, colStatus + 1).setValue(completeStatus);
-  }
-
-  return processed;
+  return processYellowSheetActions(ss);
 }
 
 // ---------------------------------------------------------------------------
@@ -370,12 +276,3 @@ function formatTimeValue(timeValue) {
   return String(timeValue).trim();
 }
 
-/**
- * Runtime override for Yellow Sheet processing.
- *
- * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ss
- * @returns {number}
- */
-function processApprovedYellowSheets(ss) {
-  return processYellowSheetActions(ss);
-}

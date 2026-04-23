@@ -9,18 +9,18 @@ function onOpen(e) {
 
   var rosterMenu = ui
     .createMenu('📋 Roster & Forms')
-    .addItem('Sync roster from database', 'syncRosterFromDatabase')
-    .addItem('Sync roster names to forms', 'syncRosterToForms')
-    .addItem('Build / rebuild forms', 'buildAllForms');
+    .addItem('🔄 Sync Roster from Database', 'syncRosterFromDatabase')
+    .addItem('📤 Push Names to Google Forms', 'syncRosterToForms')
+    .addItem('🛠️ Build / Rebuild All Forms', 'buildAllForms');
 
   var adminMenu = ui
     .createMenu('⚠️ Admin')
-    .addItem('Settings', 'openSettingsDialog')
-    .addItem('Validate environment', 'validateEnvironment')
-    .addItem('Initialize system', 'initializeSystem')
+    .addItem('🔧 System Settings', 'openSettingsDialog')
+    .addItem('🔍 Validate Environment', 'validateEnvironment')
+    .addItem('🚀 Initialize System', 'initializeSystem')
     .addSeparator()
-    .addItem('New year setup', 'newYearSetup')
-    .addItem('Clear attendance history', 'clearAttendanceHistory');
+    .addItem('📅 New Year Setup', 'newYearSetup')
+    .addItem('🧹 Clear Attendance History', 'clearAttendanceHistory');
 
   ui.createMenu('🥁 Attendance')
     .addItem('➕ Add rehearsal date', 'addRehearsalDate')

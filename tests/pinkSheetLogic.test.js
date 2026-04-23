@@ -17,40 +17,39 @@ describe('PinkSheetLogic', () => {
     pending: 'Pending',
     approved: 'Approved',
     denied: 'Denied',
-    complete: 'Completed',
   };
 
-  test('approved rows complete only when the date exists', () => {
+  test('approved rows write Excused only when the matching date exists, and Status stays Approved', () => {
     const logic = loadPinkSheetLogic();
 
     expect(logic.determinePinkSheetAction('Approved', true, statuses)).toEqual({
       writeAttendance: true,
-      clearAttendance: false,
+      attendanceValue: 'excused',
       writeNote: true,
-      nextStatus: 'Completed',
+      nextStatus: 'Approved',
     });
 
     expect(logic.determinePinkSheetAction('Approved', false, statuses)).toEqual({
       writeAttendance: false,
-      clearAttendance: false,
+      attendanceValue: null,
       writeNote: false,
       nextStatus: 'Approved',
     });
   });
 
-  test('denied rows clear any prior Excused, add a note, and complete when the date exists', () => {
+  test('denied rows write Absent (not blank) when the matching date exists, and Status stays Denied', () => {
     const logic = loadPinkSheetLogic();
 
     expect(logic.determinePinkSheetAction('Denied', true, statuses)).toEqual({
       writeAttendance: true,
-      clearAttendance: true,
+      attendanceValue: 'absent',
       writeNote: true,
-      nextStatus: 'Completed',
+      nextStatus: 'Denied',
     });
 
     expect(logic.determinePinkSheetAction('Denied', false, statuses)).toEqual({
       writeAttendance: false,
-      clearAttendance: true,
+      attendanceValue: null,
       writeNote: false,
       nextStatus: 'Denied',
     });
@@ -61,14 +60,14 @@ describe('PinkSheetLogic', () => {
 
     expect(logic.determinePinkSheetAction('Pending', true, statuses)).toEqual({
       writeAttendance: false,
-      clearAttendance: false,
+      attendanceValue: null,
       writeNote: true,
       nextStatus: 'Pending',
     });
 
     expect(logic.determinePinkSheetAction('Pending', false, statuses)).toEqual({
       writeAttendance: false,
-      clearAttendance: false,
+      attendanceValue: null,
       writeNote: false,
       nextStatus: 'Pending',
     });

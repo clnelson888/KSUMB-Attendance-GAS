@@ -131,7 +131,7 @@ describe('Workflow interactions', () => {
       status: 'Approved',
     });
 
-    expect(approvedOutcome.statusValue).toBe('Completed');
+    expect(approvedOutcome.statusValue).toBe('Approved');
     expect(spreadsheet.getSheetByName('Tuba').getRange(2, 2).getValue()).toBe('Excused');
     expect(spreadsheet.getSheetByName('Tuba').getRange(2, 2).getNote()).toContain('Pink Sheet approved');
 
@@ -147,12 +147,12 @@ describe('Workflow interactions', () => {
     expect(missingDateOutcome.statusValue).toBe('Pending');
   });
 
-  test('Yellow Sheet upsert updates an existing complete row and resets note to pending', () => {
+  test('Yellow Sheet upsert updates an existing approved row in place and resets note to pending', () => {
     const { context, spreadsheet } = createGasTestContext({
       Data: buildDataSheet(),
       'Yellow Sheets': new MockSheet('Yellow Sheets', [
-        ['Submission ID', 'Response ID', 'Submitted At', 'Last Updated At', 'Full Name', 'Section', 'Conflict Days', 'Start Time', 'End Time', 'Notes', 'Status', 'Processed At', 'Error'],
-        ['old-sub', 'resp-1', new Date(2026, 3, 1, 12, 0, 0), new Date(2026, 3, 1, 12, 0, 0), 'Smith, Sam', 'Tuba', 'Monday', '2:30 PM', '3:20 PM', '', 'Complete', new Date(2026, 3, 1, 13, 0, 0), ''],
+        ['Submission ID', 'Response ID', 'Submitted At', 'Last Updated At', 'Full Name', 'Section', 'Conflict Days', 'Start Time', 'End Time', 'Notes', 'Status', 'Approved At', 'Denied At', 'Processed At', 'Error'],
+        ['old-sub', 'resp-1', new Date(2026, 3, 1, 12, 0, 0), new Date(2026, 3, 1, 12, 0, 0), 'Smith, Sam', 'Tuba', 'Monday', '2:30 PM', '3:20 PM', '', 'Approved', new Date(2026, 3, 1, 13, 0, 0), '', new Date(2026, 3, 1, 13, 0, 0), ''],
       ]),
       Tuba: new MockSheet('Tuba', [
         ['Name'],
@@ -178,6 +178,9 @@ describe('Workflow interactions', () => {
 
     expect(rowIndex).toBe(2);
     expect(spreadsheet.getSheetByName('Yellow Sheets').getRange(2, 11).getValue()).toBe('Pending');
+    expect(spreadsheet.getSheetByName('Yellow Sheets').getRange(2, 12).getValue()).toBe('');
+    expect(spreadsheet.getSheetByName('Yellow Sheets').getRange(2, 13).getValue()).toBe('');
+    expect(spreadsheet.getSheetByName('Yellow Sheets').getRange(2, 14).getValue()).toBe('');
     expect(spreadsheet.getSheetByName('Tuba').getRange(2, 1).getNote()).toContain('Pending Yellow Sheet');
     expect(spreadsheet.getSheetByName('Tuba').getRange(2, 1).getNote()).toContain('Submitted: ');
   });

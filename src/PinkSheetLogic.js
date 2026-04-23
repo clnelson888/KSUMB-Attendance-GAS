@@ -1,11 +1,13 @@
 /**
  * Returns the Pink Sheet processing action for a row based on status and
- * whether the matching rehearsal date currently exists.
+ * whether the matching rehearsal date currently exists. The returned
+ * `attendanceValue` is a logical token ('excused' | 'absent' | null) that the
+ * caller resolves to the configured attendance string via getAttendanceValue.
  *
  * @param {string} statusValue
  * @param {boolean} hasMatchingDate
- * @param {{pending: string, approved: string, denied: string, complete: string}} statuses
- * @returns {{writeAttendance: boolean, writeNote: boolean, nextStatus: string}}
+ * @param {{pending: string, approved: string, denied: string}} statuses
+ * @returns {{writeAttendance: boolean, attendanceValue: (string|null), writeNote: boolean, nextStatus: string}}
  */
 function determinePinkSheetAction(statusValue, hasMatchingDate, statuses) {
   var normalized = String(statusValue || '').trim();
@@ -13,25 +15,25 @@ function determinePinkSheetAction(statusValue, hasMatchingDate, statuses) {
   if (normalized === statuses.approved) {
     return {
       writeAttendance: hasMatchingDate,
-      clearAttendance: false,
+      attendanceValue: hasMatchingDate ? 'excused' : null,
       writeNote: hasMatchingDate,
-      nextStatus: hasMatchingDate ? statuses.complete : statuses.approved,
+      nextStatus: statuses.approved,
     };
   }
 
   if (normalized === statuses.denied) {
     return {
       writeAttendance: hasMatchingDate,
-      clearAttendance: true,
+      attendanceValue: hasMatchingDate ? 'absent' : null,
       writeNote: hasMatchingDate,
-      nextStatus: hasMatchingDate ? statuses.complete : statuses.denied,
+      nextStatus: statuses.denied,
     };
   }
 
   if (normalized === statuses.pending) {
     return {
       writeAttendance: false,
-      clearAttendance: false,
+      attendanceValue: null,
       writeNote: hasMatchingDate,
       nextStatus: statuses.pending,
     };
@@ -39,7 +41,7 @@ function determinePinkSheetAction(statusValue, hasMatchingDate, statuses) {
 
   return {
     writeAttendance: false,
-    clearAttendance: false,
+    attendanceValue: null,
     writeNote: false,
     nextStatus: normalized,
   };

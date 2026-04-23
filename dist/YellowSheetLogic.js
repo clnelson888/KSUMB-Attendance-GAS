@@ -1,15 +1,13 @@
 /**
  * Returns the status a Yellow Sheet row should take after a new or edited
- * submission is received.
+ * form response is received. Every fresh submission (and every edit of an
+ * existing response) is treated as Pending so staff can re-verify.
  *
  * @param {string} previousStatus
- * @param {{pending: string, complete: string}} statuses
+ * @param {{pending: string}} statuses
  * @returns {string}
  */
 function getYellowSubmissionStatus(previousStatus, statuses) {
-  if (isCompleteStatusValue(previousStatus)) {
-    return statuses.pending;
-  }
   return statuses.pending;
 }
 
@@ -44,4 +42,28 @@ function getPendingYellowSheetNoteText(submittedAtLabel) {
   var submitted = String(submittedAtLabel || '').trim();
   if (!submitted) return 'Pending Yellow Sheet';
   return 'Pending Yellow Sheet\nSubmitted: ' + submitted;
+}
+
+/**
+ * Composes the section-tab name-cell note from the student's currently
+ * approved Yellow Sheet conflict lines and whether any submissions are still
+ * pending. Empty approved list + no pending => empty note (caller clears).
+ *
+ * @param {string[]} approvedConflictLines - Lines produced by buildYellowSheetApprovedNote.
+ * @param {boolean} hasPending - True if the student has any Pending Yellow Sheet rows.
+ * @param {string} [pendingSubmittedAtLabel] - Formatted label for the most recent pending submission.
+ * @returns {string}
+ */
+function buildYellowSheetCombinedNote(approvedConflictLines, hasPending, pendingSubmittedAtLabel) {
+  var lines = [];
+  if (Array.isArray(approvedConflictLines)) {
+    for (var i = 0; i < approvedConflictLines.length; i++) {
+      var line = String(approvedConflictLines[i] || '').trim();
+      if (line) lines.push(line);
+    }
+  }
+  if (hasPending) {
+    lines.push(getPendingYellowSheetNoteText(pendingSubmittedAtLabel));
+  }
+  return lines.join('\n');
 }
