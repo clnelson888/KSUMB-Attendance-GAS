@@ -206,6 +206,12 @@
           <textarea id="LATE_REASONS"><?= settingsModel.values.LATE_REASONS ?></textarea>
           <div class="hint">One reason per line.</div>
         </div>
+
+        <div class="field-wide">
+          <label for="ROSTER_NOTE_COLUMNS">Roster Contact Info Columns</label>
+          <textarea id="ROSTER_NOTE_COLUMNS"><?= settingsModel.values.ROSTER_NOTE_COLUMNS ?></textarea>
+          <div class="hint">Database column names to append to each member's note during roster sync (one per line). Leave blank to show no contact info. Example: <code>Email</code>, <code>Phone Number</code></div>
+        </div>
       </div>
 
       <details>
@@ -266,6 +272,7 @@
         'REHEARSAL_START_TIME',
         'LATE_THRESHOLD_MINUTES',
         'LATE_REASONS',
+        'ROSTER_NOTE_COLUMNS',
         'STATUS_PENDING',
         'STATUS_APPROVED',
         'STATUS_DENIED',

@@ -13,7 +13,7 @@ function normalizeSettingsPayload(rawValues) {
     var key = keys[i];
     var value = rawValues[key];
 
-    if (key === CONFIG_KEYS.SECTION_TABS || key === CONFIG_KEYS.LATE_REASONS) {
+    if (key === CONFIG_KEYS.SECTION_TABS || key === CONFIG_KEYS.LATE_REASONS || key === CONFIG_KEYS.ROSTER_NOTE_COLUMNS) {
       normalized[key] = parseConfigList(value).join('\n');
       continue;
     }

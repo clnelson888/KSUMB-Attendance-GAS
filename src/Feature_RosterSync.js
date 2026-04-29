@@ -1,10 +1,11 @@
 /** @OnlyCurrentDoc */
 
 /**
- * Reads the Database tab and returns active members grouped by section,
- * plus a count of rows ignored (inactive, blank, or duplicate).
+ * Reads the Database tab and returns active members grouped by section, a map
+ * of each active member's full row data keyed by "section||fullName" (for
+ * building contact notes), and a count of rows ignored.
  *
- * @returns {{ bySection: Object.<string, string[]>, ignoredCount: number }}
+ * @returns {{ bySection: Object.<string, string[]>, memberRows: Object.<string, Object.<string, *>>, ignoredCount: number }}
  */
 function getDatabaseRosterBySection() {
   var data = getTableData('Database', {
@@ -12,7 +13,7 @@ function getDatabaseRosterBySection() {
     expectedHeaders: ['Full Name', 'Section'],
   });
   if (data.length < 2) {
-    return { bySection: {}, ignoredCount: 0 };
+    return { bySection: {}, memberRows: {}, ignoredCount: 0 };
   }
 
   var headers = data[0];
@@ -38,15 +39,30 @@ function getDatabaseRosterBySection() {
       fullName: fullName,
       section: section,
       active: colActive !== -1 ? data[i][colActive] : true,
+      rawRow: data[i],
     });
   }
 
   var bySection = groupActiveRosterMembersBySection(members);
+
+  // Build a flat dict of each active member's row data keyed by "section||fullName"
+  var memberRows = {};
+  for (var j = 0; j < members.length; j++) {
+    var m = members[j];
+    if (!isRosterMemberActive(m.active)) continue;
+    var key = m.section + '||' + m.fullName;
+    var rowData = {};
+    for (var h = 0; h < headers.length; h++) {
+      rowData[headers[h]] = m.rawRow[h];
+    }
+    memberRows[key] = rowData;
+  }
+
   var kept = 0;
   var sectionKeys = Object.keys(bySection);
   for (var s = 0; s < sectionKeys.length; s++) kept += bySection[sectionKeys[s]].length;
 
-  return { bySection: bySection, ignoredCount: Math.max(totalRows - kept, 0) };
+  return { bySection: bySection, memberRows: memberRows, ignoredCount: Math.max(totalRows - kept, 0) };
 }
 
 /**
@@ -86,19 +102,25 @@ function collectExistingSectionRecords(ss) {
 }
 
 /**
- * Builds the new values/notes arrays for a section tab.
+ * Builds the new values/notes arrays for a section tab. When memberRows and
+ * noteColumns are provided, the name-cell note (column A) for each member is
+ * updated with fresh roster contact info while preserving any Yellow Sheet
+ * content that already lives above the ROSTER_NOTE_SEPARATOR.
  *
  * @param {string} sectionName
  * @param {string[]} memberNames
  * @param {number} columnCount
  * @param {Object.<string, {values: Array, notes: Array}>} existingRecords
+ * @param {Object.<string, Object.<string, *>>} [memberRows]
+ * @param {string[]} [noteColumns]
  * @returns {{values: Array[], notes: Array[], kept: number, added: number}}
  */
-function buildSectionSyncRows(sectionName, memberNames, columnCount, existingRecords) {
+function buildSectionSyncRows(sectionName, memberNames, columnCount, existingRecords, memberRows, noteColumns) {
   var rows = [];
   var notes = [];
   var kept = 0;
   var added = 0;
+  var hasMemberRows = memberRows && noteColumns && noteColumns.length > 0;
 
   for (var i = 0; i < memberNames.length; i++) {
     var fullName = memberNames[i];
@@ -110,7 +132,9 @@ function buildSectionSyncRows(sectionName, memberNames, columnCount, existingRec
     }
 
     valuesRow[0] = fullName;
-    var existing = existingRecords[sectionName + '||' + fullName];
+    var memberKey = sectionName + '||' + fullName;
+    var existing = existingRecords[memberKey];
+
     if (existing) {
       for (var j = 0; j < Math.min(existing.values.length, columnCount); j++) {
         valuesRow[j] = existing.values[j];
@@ -122,6 +146,15 @@ function buildSectionSyncRows(sectionName, memberNames, columnCount, existingRec
       kept++;
     } else {
       added++;
+    }
+
+    // Rebuild the name-cell note: preserve Yellow Sheet content (above the
+    // separator) and replace the contact info block with fresh database values.
+    if (hasMemberRows) {
+      var rowData = (memberRows && memberRows[memberKey]) || {};
+      var contactNote = buildRosterContactNote(rowData, noteColumns);
+      var split = splitNoteAtRosterSeparator(notesRow[0]);
+      notesRow[0] = buildCombinedMemberNote(split.yellowSheetPart, contactNote);
     }
 
     rows.push(valuesRow);
@@ -163,6 +196,8 @@ function syncRosterFromDatabase() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var roster = getDatabaseRosterBySection();
   var rosterBySection = roster.bySection;
+  var memberRows = roster.memberRows;
+  var noteColumns = getConfiguredRosterNoteColumns();
   var existingRecords = collectExistingSectionRecords(ss);
   var sectionTabs = getConfiguredSectionTabs();
   var lock = LockService.getScriptLock();
@@ -178,7 +213,7 @@ function syncRosterFromDatabase() {
 
       var lastCol = Math.max(sheet.getLastColumn(), 1);
       var memberNames = rosterBySection[sectionName] || [];
-      var sectionRows = buildSectionSyncRows(sectionName, memberNames, lastCol, existingRecords);
+      var sectionRows = buildSectionSyncRows(sectionName, memberNames, lastCol, existingRecords, memberRows, noteColumns);
       var removed = countRemovedFromSection(sectionName, memberNames, existingRecords);
       var existingDataRowCount = Math.max(sheet.getLastRow() - 1, 0);
 

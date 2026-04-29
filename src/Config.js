@@ -41,6 +41,7 @@ const CONFIG_KEYS = {
   ATTENDANCE_ABSENT: 'ATTENDANCE_ABSENT',
   ATTENDANCE_EXCUSED: 'ATTENDANCE_EXCUSED',
   LATE_REASONS: 'LATE_REASONS',
+  ROSTER_NOTE_COLUMNS: 'ROSTER_NOTE_COLUMNS',
 };
 
 const CONFIG_PROPERTY_PREFIX = 'CFG__';
@@ -87,6 +88,7 @@ DEFAULT_CONFIG_VALUES[CONFIG_KEYS.LATE_REASONS] = [
   'Personal emergency',
   'Other',
 ].join('\n');
+DEFAULT_CONFIG_VALUES[CONFIG_KEYS.ROSTER_NOTE_COLUMNS] = '';
 
 /**
  * Logical status names used internally.
@@ -305,6 +307,17 @@ function getConfiguredLateReasons() {
   var configured = parseConfigList(getConfigValue(CONFIG_KEYS.LATE_REASONS, ''));
   if (configured.length > 0) return configured;
   return parseConfigList(DEFAULT_CONFIG_VALUES[CONFIG_KEYS.LATE_REASONS]);
+}
+
+/**
+ * Returns the ordered list of Database column names whose values should be
+ * appended to each member's name-cell note during a roster sync. Empty list
+ * means no contact info is appended.
+ *
+ * @returns {string[]}
+ */
+function getConfiguredRosterNoteColumns() {
+  return parseConfigList(getConfigValue(CONFIG_KEYS.ROSTER_NOTE_COLUMNS, ''));
 }
 
 /**

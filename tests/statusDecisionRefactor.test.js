@@ -24,6 +24,7 @@ function loadCoreWorkflowScripts(context) {
   loadGasScripts(context, [
     'src/SheetManager.js',
     'src/Config.js',
+    'src/RosterSyncLogic.js',
     'src/LateCheckInLogic.js',
     'src/PinkSheetLogic.js',
     'src/YellowSheetLogic.js',

@@ -24,6 +24,7 @@ function loadCoreWorkflowScripts(context) {
   loadGasScripts(context, [
     'src/SheetManager.js',
     'src/Config.js',
+    'src/RosterSyncLogic.js',
     'src/LateCheckInLogic.js',
     'src/PinkSheetLogic.js',
     'src/YellowSheetLogic.js',
@@ -32,7 +33,6 @@ function loadCoreWorkflowScripts(context) {
     'src/Feature_LateCheckIn.js',
     'src/Feature_PinkSheets.js',
     'src/Feature_YellowSheets.js',
-    'src/RosterSyncLogic.js',
     'src/Feature_RosterSync.js',
   ]);
 }
