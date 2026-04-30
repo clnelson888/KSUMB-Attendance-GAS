@@ -114,8 +114,10 @@ function clearManagedSheetData(sheetName) {
 
 /**
  * Clears all member name rows from every section tab, then writes
- * EXAMPLE_MEMBER_NAME into row 2 so per-cell data validation on column A
- * is preserved until Roster sync repopulates the tab.
+ * EXAMPLE_MEMBER_NAME into row 2. Extra rows (3+) are physically deleted to
+ * match the approach clearAttendanceHistory uses for extra date columns —
+ * keeping the sheet tidy while leaving the placeholder row so any data
+ * validation on column A survives until roster sync repopulates the tab.
  */
 function clearSectionRoster() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -126,11 +128,17 @@ function clearSectionRoster() {
     if (!sheet) continue;
 
     var lastRow = sheet.getLastRow();
-    if (lastRow >= 2) {
-      sheet.getRange(2, 1, lastRow - 1, 1).clearContent().clearNote();
-    }
 
+    if (lastRow >= 2) {
+      sheet.getRange(2, 1).clearContent().clearNote();
+    }
     sheet.getRange(2, 1).setValue(EXAMPLE_MEMBER_NAME);
+
+    // Delete rows beyond the placeholder — mirrors how clearAttendanceHistory
+    // deletes extra date columns rather than just clearing their content.
+    if (lastRow > 2) {
+      sheet.deleteRows(3, lastRow - 2);
+    }
   }
 }
 

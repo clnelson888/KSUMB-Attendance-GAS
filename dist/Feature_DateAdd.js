@@ -105,6 +105,16 @@ function insertRehearsalDate(dateString, timeString) {
     }
     if (exampleCol !== -1) {
       sheet.getRange(1, exampleCol).setValue(headerString);
+      // Extend this column's data validation to cover all current data rows.
+      // After a system reset the placeholder row (row 2) is the only row with
+      // validation; once roster sync repopulates the tab, rows 3+ need the
+      // same attendance dropdown. Reuses the same PASTE_DATA_VALIDATION
+      // pattern used when inserting a brand-new date column.
+      if (lastRow > 2) {
+        var exSrc = sheet.getRange(2, exampleCol, 1, 1);
+        var exTgt = sheet.getRange(3, exampleCol, lastRow - 2, 1);
+        exSrc.copyTo(exTgt, SpreadsheetApp.CopyPasteType.PASTE_DATA_VALIDATION, false);
+      }
       tabsProcessed++;
       continue;
     }
