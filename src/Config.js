@@ -65,6 +65,14 @@ const DATETIME_NOTE_FORMAT = 'M/d/yyyy h:mm a';
 const EXAMPLE_DATE_HEADER = '1/1 12:00 AM';
 
 /**
+ * Placeholder name written to row 2 of every section tab by systemReset so
+ * that per-cell data validation rules on column A survive the roster wipe.
+ * Roster sync overwrites this row when real members are synced in.
+ * @type {string}
+ */
+const EXAMPLE_MEMBER_NAME = 'Wildcat, Willie';
+
+/**
  * Default values written by initializeSystem() when a setting is missing.
  * @type {Object.<string, string|number>}
  */

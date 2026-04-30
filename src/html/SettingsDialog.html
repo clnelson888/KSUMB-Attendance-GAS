@@ -214,46 +214,6 @@
         </div>
       </div>
 
-      <details>
-        <summary>Advanced Labels</summary>
-        <div class="content">
-          <div class="grid">
-            <div class="field">
-              <label for="STATUS_PENDING">Pending Status</label>
-              <input id="STATUS_PENDING" type="text" value="<?= settingsModel.values.STATUS_PENDING ?>" />
-            </div>
-            <div class="field">
-              <label for="STATUS_APPROVED">Approved Status</label>
-              <input id="STATUS_APPROVED" type="text" value="<?= settingsModel.values.STATUS_APPROVED ?>" />
-            </div>
-            <div class="field">
-              <label for="STATUS_DENIED">Denied Status</label>
-              <input id="STATUS_DENIED" type="text" value="<?= settingsModel.values.STATUS_DENIED ?>" />
-            </div>
-            <div class="field">
-              <label for="STATUS_COMPLETE">Completed Status</label>
-              <input id="STATUS_COMPLETE" type="text" value="<?= settingsModel.values.STATUS_COMPLETE ?>" />
-            </div>
-            <div class="field">
-              <label for="ATTENDANCE_PRESENT">Present Label</label>
-              <input id="ATTENDANCE_PRESENT" type="text" value="<?= settingsModel.values.ATTENDANCE_PRESENT ?>" />
-            </div>
-            <div class="field">
-              <label for="ATTENDANCE_TARDY">Tardy Label</label>
-              <input id="ATTENDANCE_TARDY" type="text" value="<?= settingsModel.values.ATTENDANCE_TARDY ?>" />
-            </div>
-            <div class="field">
-              <label for="ATTENDANCE_ABSENT">Absent Label</label>
-              <input id="ATTENDANCE_ABSENT" type="text" value="<?= settingsModel.values.ATTENDANCE_ABSENT ?>" />
-            </div>
-            <div class="field">
-              <label for="ATTENDANCE_EXCUSED">Excused Label</label>
-              <input id="ATTENDANCE_EXCUSED" type="text" value="<?= settingsModel.values.ATTENDANCE_EXCUSED ?>" />
-            </div>
-          </div>
-        </div>
-      </details>
-
       <div id="status" class="status"></div>
 
       <div class="actions">
@@ -273,14 +233,6 @@
         'LATE_THRESHOLD_MINUTES',
         'LATE_REASONS',
         'ROSTER_NOTE_COLUMNS',
-        'STATUS_PENDING',
-        'STATUS_APPROVED',
-        'STATUS_DENIED',
-        'STATUS_COMPLETE',
-        'ATTENDANCE_PRESENT',
-        'ATTENDANCE_TARDY',
-        'ATTENDANCE_ABSENT',
-        'ATTENDANCE_EXCUSED',
       ];
 
       var DEFAULTS = <?!= JSON.stringify(settingsModel.defaults) ?>;

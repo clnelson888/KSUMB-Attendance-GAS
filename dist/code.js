@@ -19,7 +19,7 @@ function onOpen(e) {
     .addItem('🔍 Validate Environment', 'validateEnvironment')
     .addItem('🚀 Initialize System', 'initializeSystem')
     .addSeparator()
-    .addItem('📅 New Year Setup', 'newYearSetup')
+    .addItem('⚠️ System Reset', 'systemReset')
     .addItem('🧹 Clear Attendance History', 'clearAttendanceHistory');
 
   ui.createMenu('🥁 Attendance')
