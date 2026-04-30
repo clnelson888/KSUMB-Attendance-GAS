@@ -272,10 +272,18 @@ function initializeSystem() {
     results.push('Forms are already set up. Use Roster & Forms › Build / Rebuild Forms to update them.');
   }
 
+  var urls = getFormPublishedUrls();
+  if (urls.PINK) results.push('Pink Sheet URL:\n' + urls.PINK);
+  if (urls.LATE) results.push('Late Check-In URL:\n' + urls.LATE);
+  if (urls.YELLOW) results.push('Yellow Sheet URL:\n' + urls.YELLOW);
+  if (urls.PINK || urls.LATE || urls.YELLOW) {
+    ss.toast('Forms ready. Copy links from the Initialize System summary or open Settings to find them.', 'Initialize System', 20);
+  }
+
   SpreadsheetApp.flush();
   logSystemEvent('Admin', 'initializeSystem', 'INFO', '', results.join(' | '));
 
-  SpreadsheetApp.getUi().alert('Initialize System', results.join('\n'), SpreadsheetApp.getUi().ButtonSet.OK);
+  SpreadsheetApp.getUi().alert('Initialize System', results.join('\n\n'), SpreadsheetApp.getUi().ButtonSet.OK);
 }
 
 /**

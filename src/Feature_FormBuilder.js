@@ -71,6 +71,54 @@ function buildAllForms() {
 }
 
 /**
+ * Trashes all three forms, removes all onFormSubmit triggers, and clears the
+ * stored form IDs from Script Properties. Called by systemReset so the next
+ * initializeSystem run builds fresh forms from scratch.
+ */
+function deleteAllForms() {
+  var props = PropertiesService.getScriptProperties();
+
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getEventType() === ScriptApp.EventType.ON_FORM_SUBMIT) {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+
+  _trashForm(props.getProperty(_PROP_PINK));
+  _trashForm(props.getProperty(_PROP_LATE));
+  _trashForm(props.getProperty(_PROP_YELLOW));
+
+  props.deleteProperty(_PROP_PINK);
+  props.deleteProperty(_PROP_LATE);
+  props.deleteProperty(_PROP_YELLOW);
+
+  console.log('FormBuilder: deleted all forms and removed form submit triggers.');
+}
+
+/**
+ * Returns the student-facing published URL for each form, or an empty string
+ * if the form has not been built yet or is no longer accessible.
+ *
+ * @returns {{ PINK: string, LATE: string, YELLOW: string }}
+ */
+function getFormPublishedUrls() {
+  var ids = _getStoredFormIds();
+  var urls = { PINK: '', LATE: '', YELLOW: '' };
+  var keys = ['PINK', 'LATE', 'YELLOW'];
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    if (!ids[key]) continue;
+    try {
+      urls[key] = FormApp.openById(ids[key]).getPublishedUrl();
+    } catch (e) {
+      // Form was trashed or ID is stale — leave empty
+    }
+  }
+  return urls;
+}
+
+/**
  * Logs the published (student-facing) and edit (staff) URLs for each form.
  * Run from the Apps Script editor: select logFormUrls and click Run.
  */

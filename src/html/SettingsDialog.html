@@ -95,21 +95,55 @@
         resize: vertical;
       }
 
-      details {
+      .form-links {
         margin-top: 14px;
+        padding: 12px 14px;
         border: 1px solid var(--line);
         border-radius: 12px;
         background: #fbf8f1;
       }
 
-      summary {
-        cursor: pointer;
-        padding: 12px 14px;
+      .form-links h2 {
+        margin: 0 0 10px;
+        font-size: 13px;
         font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
       }
 
-      details .content {
-        padding: 0 14px 14px;
+      .form-links dl {
+        margin: 0;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 5px 12px;
+        align-items: baseline;
+      }
+
+      .form-links dt {
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .form-links dd {
+        margin: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .form-links a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      .form-links a:hover {
+        text-decoration: underline;
+      }
+
+      .form-links .not-built {
+        color: var(--muted);
+        font-style: italic;
       }
 
       .status {
@@ -212,6 +246,36 @@
           <textarea id="ROSTER_NOTE_COLUMNS"><?= settingsModel.values.ROSTER_NOTE_COLUMNS ?></textarea>
           <div class="hint">Database column names to append to each member's note during roster sync (one per line). Leave blank to show no contact info. Example: <code>Email</code>, <code>Phone Number</code></div>
         </div>
+      </div>
+
+      <div class="form-links">
+        <h2>Form Links</h2>
+        <dl>
+          <dt>Pink Sheet</dt>
+          <dd>
+            <? if (settingsModel.formUrls.PINK) { ?>
+            <a href="<?= settingsModel.formUrls.PINK ?>" target="_blank">Open form ↗</a>
+            <? } else { ?>
+            <span class="not-built">Not built yet — run Initialize System</span>
+            <? } ?>
+          </dd>
+          <dt>Late Check-In</dt>
+          <dd>
+            <? if (settingsModel.formUrls.LATE) { ?>
+            <a href="<?= settingsModel.formUrls.LATE ?>" target="_blank">Open form ↗</a>
+            <? } else { ?>
+            <span class="not-built">Not built yet — run Initialize System</span>
+            <? } ?>
+          </dd>
+          <dt>Yellow Sheet</dt>
+          <dd>
+            <? if (settingsModel.formUrls.YELLOW) { ?>
+            <a href="<?= settingsModel.formUrls.YELLOW ?>" target="_blank">Open form ↗</a>
+            <? } else { ?>
+            <span class="not-built">Not built yet — run Initialize System</span>
+            <? } ?>
+          </dd>
+        </dl>
       </div>
 
       <div id="status" class="status"></div>
