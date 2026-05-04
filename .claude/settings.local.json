@@ -10,7 +10,11 @@
       "mcp__google-dev-knowledge__answer_query",
       "Bash(npm test *)",
       "Bash(git -C \"C:\\\\Users\\\\Cameron\\\\OneDrive - Kansas State University\\\\School\\\\2025-2026 Spring\\\\MIS 677 - Senior MIS Project\\\\KSUMB-Attendance-GAS\" diff src/Feature_FormSync.js)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "mcp__92992562-9376-4443-9c41-854a1d3563a6__lucid_create_sequence_diagram",
+      "mcp__92992562-9376-4443-9c41-854a1d3563a6__get_mcp_resource",
+      "mcp__92992562-9376-4443-9c41-854a1d3563a6__lucid_create_diagram_from_specification",
+      "mcp__drawio__open_drawio_mermaid"
     ]
   }
 }

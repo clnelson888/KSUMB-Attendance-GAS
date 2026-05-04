@@ -32,20 +32,23 @@ function buildRosterContactNote(memberRowData, noteColumns) {
  * is roster contact info. If no separator is found the entire text is treated
  * as Yellow Sheet content and contactPart is empty.
  *
+ * The separator may appear at any position, including the very start of the
+ * note (when no Yellow Sheet content exists yet), so we search for the
+ * separator string directly rather than requiring a newline before it.
+ *
  * @param {string} note
  * @returns {{ yellowSheetPart: string, contactPart: string }}
  */
 function splitNoteAtRosterSeparator(note) {
   var text = String(note || '');
-  var sep = '\n' + ROSTER_NOTE_SEPARATOR + '\n';
+  var sep = ROSTER_NOTE_SEPARATOR;
   var idx = text.indexOf(sep);
   if (idx === -1) {
     return { yellowSheetPart: text, contactPart: '' };
   }
-  return {
-    yellowSheetPart: text.substring(0, idx),
-    contactPart: text.substring(idx + sep.length),
-  };
+  var ys = text.substring(0, idx).replace(/\n$/, '');
+  var contact = text.substring(idx + sep.length).replace(/^\n/, '');
+  return { yellowSheetPart: ys, contactPart: contact };
 }
 
 /**
@@ -61,8 +64,10 @@ function buildCombinedMemberNote(yellowSheetPart, contactPart) {
   var ys = String(yellowSheetPart || '').trim();
   var contact = String(contactPart || '').trim();
   if (!ys && !contact) return '';
-  if (!ys) return contact;
   if (!contact) return ys;
+  // Always include the separator when contact info is present so that
+  // splitNoteAtRosterSeparator can reliably recover it even when ys is empty.
+  if (!ys) return ROSTER_NOTE_SEPARATOR + '\n' + contact;
   return ys + '\n' + ROSTER_NOTE_SEPARATOR + '\n' + contact;
 }
 

@@ -7,20 +7,21 @@ function openSettingsDialog() {
   var template = HtmlService.createTemplateFromFile('SettingsDialog');
   template.settingsModel = getSettingsDialogModel();
 
-  var html = template.evaluate().setWidth(560).setHeight(640).setTitle('Attendance Settings');
+  var html = template.evaluate().setWidth(560).setHeight(740).setTitle('Attendance Settings');
   SpreadsheetApp.getUi().showModalDialog(html, 'Attendance Settings');
 }
 
 /**
  * Returns the current settings model used by the dialog.
  *
- * @returns {{values: Object.<string, string>, defaults: Object.<string, string>, hasLegacyDataSheet: boolean}}
+ * @returns {{values: Object.<string, string>, defaults: Object.<string, string>, hasLegacyDataSheet: boolean, formUrls: {PINK: string, LATE: string, YELLOW: string}}}
  */
 function getSettingsDialogModel() {
   return {
     values: getEditableConfigValues(),
     defaults: buildDefaultSettingsPayload(),
     hasLegacyDataSheet: hasLegacyDataSheet(),
+    formUrls: getFormPublishedUrls(),
   };
 }
 

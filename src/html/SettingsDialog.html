@@ -79,7 +79,8 @@
       }
 
       input,
-      textarea {
+      textarea,
+      select {
         width: 100%;
         box-sizing: border-box;
         border: 1px solid var(--line);
@@ -231,8 +232,24 @@
         </div>
 
         <div class="field">
-          <label for="LATE_THRESHOLD_MINUTES">Late Threshold Minutes</label>
+          <label for="LATE_THRESHOLD_MINUTES">Tardy Threshold (minutes)</label>
           <input id="LATE_THRESHOLD_MINUTES" type="number" min="0" step="1" value="<?= settingsModel.values.LATE_THRESHOLD_MINUTES ?>" />
+          <div class="hint">Minutes after rehearsal start before a member without a Yellow Sheet is marked Tardy.</div>
+        </div>
+
+        <div class="field">
+          <label for="YELLOW_SHEET_THRESHOLD_MINUTES">Yellow Sheet Tardy Threshold (minutes)</label>
+          <input id="YELLOW_SHEET_THRESHOLD_MINUTES" type="number" min="0" step="1" value="<?= settingsModel.values.YELLOW_SHEET_THRESHOLD_MINUTES ?>" />
+          <div class="hint">Grace period for members with an approved Yellow Sheet conflict on that day.</div>
+        </div>
+
+        <div class="field-wide">
+          <label for="YELLOW_SHEET_THRESHOLD_MODE">Yellow Sheet Threshold Reference</label>
+          <select id="YELLOW_SHEET_THRESHOLD_MODE">
+            <option value="after_class_end"<?= settingsModel.values.YELLOW_SHEET_THRESHOLD_MODE !== 'after_rehearsal_start' ? ' selected' : '' ?>>After class ends (class end time + threshold)</option>
+            <option value="after_rehearsal_start"<?= settingsModel.values.YELLOW_SHEET_THRESHOLD_MODE === 'after_rehearsal_start' ? ' selected' : '' ?>>After rehearsal starts (rehearsal start + threshold)</option>
+          </select>
+          <div class="hint">Whether the Yellow Sheet grace period is counted from the member's class end time or from rehearsal start.</div>
         </div>
 
         <div class="field-wide">
@@ -295,6 +312,8 @@
         'TIMEZONE',
         'REHEARSAL_START_TIME',
         'LATE_THRESHOLD_MINUTES',
+        'YELLOW_SHEET_THRESHOLD_MINUTES',
+        'YELLOW_SHEET_THRESHOLD_MODE',
         'LATE_REASONS',
         'ROSTER_NOTE_COLUMNS',
       ];

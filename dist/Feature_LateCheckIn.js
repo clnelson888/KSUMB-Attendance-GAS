@@ -111,14 +111,38 @@ function validateLateCheckInPayload(payload) {
 }
 
 /**
+ * Loads Yellow Sheet data into a context object suitable for passing to
+ * processSingleLateCheckIn. Pre-loading once before a batch saves N-1
+ * redundant sheet reads. Returns null when the Yellow Sheets sheet is absent
+ * or empty (the feature degrades gracefully to standard threshold logic).
+ *
+ * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ss
+ * @returns {{allData: Array[][], headerMap: Object, approvedStatus: string}|null}
+ */
+function loadYellowSheetContext(ss) {
+  var sheet = ss.getSheetByName('Yellow Sheets');
+  if (!sheet || sheet.getLastRow() < 2) return null;
+  var allData = sheet.getDataRange().getValues();
+  return {
+    allData: allData,
+    headerMap: getYellowSheetHeaderMap(allData[0]),
+    approvedStatus: getStatusValue('APPROVED'),
+  };
+}
+
+/**
  * Processes a single late-check-in queue item against the section attendance
  * sheet. Returns a structured outcome without mutating the queue row.
  *
+ * Pass a pre-loaded ysContext (from loadYellowSheetContext) when processing
+ * many rows in a loop; the context is loaded on-demand when omitted.
+ *
  * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ss
  * @param {Object} payload
+ * @param {{allData: Array[][], headerMap: Object, approvedStatus: string}|null} [ysContext]
  * @returns {{statusValue: string, processedAt: Date|string, errorMessage: string, updated: boolean}}
  */
-function processSingleLateCheckIn(ss, payload) {
+function processSingleLateCheckIn(ss, payload, ysContext) {
   var pendingStatus = getStatusValue('PENDING');
   var completeStatus = getStatusValue('COMPLETE');
   var attendanceValues = {
@@ -200,17 +224,48 @@ function processSingleLateCheckIn(ss, payload) {
     };
   }
 
-  var thresholdMinutes = parseLateThresholdMinutes(
-    getConfigValue(CONFIG_KEYS.LATE_THRESHOLD_MINUTES, DEFAULT_CONFIG_VALUES[CONFIG_KEYS.LATE_THRESHOLD_MINUTES]),
-    DEFAULT_CONFIG_VALUES[CONFIG_KEYS.LATE_THRESHOLD_MINUTES]
-  );
-  var attendanceValue = determineLateAttendanceStatus(
-    payload.arrival,
-    rehearsalStart,
-    thresholdMinutes,
-    attendanceValues.present,
-    attendanceValues.tardy
-  );
+  var context = ysContext !== undefined ? ysContext : loadYellowSheetContext(ss);
+  var classEndTime = context
+    ? findApprovedClassEndTime(
+        context.allData,
+        context.headerMap,
+        payload.name,
+        payload.section,
+        payload.arrival,
+        context.approvedStatus
+      )
+    : null;
+
+  var attendanceValue;
+  if (classEndTime !== null) {
+    var ysThreshold = parseLateThresholdMinutes(
+      getConfigValue(
+        CONFIG_KEYS.YELLOW_SHEET_THRESHOLD_MINUTES,
+        DEFAULT_CONFIG_VALUES[CONFIG_KEYS.YELLOW_SHEET_THRESHOLD_MINUTES]
+      ),
+      DEFAULT_CONFIG_VALUES[CONFIG_KEYS.YELLOW_SHEET_THRESHOLD_MINUTES]
+    );
+    var ysMode = String(
+      getConfigValue(
+        CONFIG_KEYS.YELLOW_SHEET_THRESHOLD_MODE,
+        DEFAULT_CONFIG_VALUES[CONFIG_KEYS.YELLOW_SHEET_THRESHOLD_MODE]
+      )
+    ).trim();
+    var cutoff = computeYellowSheetTardyCutoff(rehearsalStart, classEndTime, ysMode, ysThreshold);
+    attendanceValue = payload.arrival.getTime() <= cutoff.getTime() ? attendanceValues.present : attendanceValues.tardy;
+  } else {
+    var thresholdMinutes = parseLateThresholdMinutes(
+      getConfigValue(CONFIG_KEYS.LATE_THRESHOLD_MINUTES, DEFAULT_CONFIG_VALUES[CONFIG_KEYS.LATE_THRESHOLD_MINUTES]),
+      DEFAULT_CONFIG_VALUES[CONFIG_KEYS.LATE_THRESHOLD_MINUTES]
+    );
+    attendanceValue = determineLateAttendanceStatus(
+      payload.arrival,
+      rehearsalStart,
+      thresholdMinutes,
+      attendanceValues.present,
+      attendanceValues.tardy
+    );
+  }
 
   var targetCell = sectionSheet.getRange(rowIndex, colIndex + 1);
   targetCell.setValue(attendanceValue);
@@ -248,6 +303,7 @@ function processPendingLateCheckInsForDate(targetDate) {
   var pendingStatus = getStatusValue('PENDING');
   var processed = 0;
   var lock = acquireLateCheckInLock();
+  var ysContext = loadYellowSheetContext(ss);
 
   try {
     for (var i = 1; i < allData.length; i++) {
@@ -267,7 +323,7 @@ function processPendingLateCheckInsForDate(targetDate) {
         otherExplanation: String(allData[i][headerMap.otherExplanation] || '').trim(),
       };
 
-      var outcome = processSingleLateCheckIn(ss, payload);
+      var outcome = processSingleLateCheckIn(ss, payload, ysContext);
       writeLateCheckInOutcome(lateSheet, headerMap, i + 1, outcome);
       if (outcome.updated) processed++;
     }

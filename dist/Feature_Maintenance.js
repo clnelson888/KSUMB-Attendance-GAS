@@ -68,16 +68,20 @@ function systemReset() {
   var result = ui.alert(
     '⚠️ System Reset — Are you sure?',
     'This will permanently clear:\n' +
+      '  • All Google Forms (moved to Drive trash)\n' +
+      '  • All form submit triggers\n' +
       '  • All member names from every section tab\n' +
       '  • All rehearsal date columns from every section tab\n' +
       '  • All queue logs (Pink Sheets, Yellow Sheets, Late Check-Ins)\n' +
       '  • All Yellow Sheet notes from section name cells\n\n' +
       'The Database tab is not affected.\n\n' +
+      'Run Initialize System afterward to rebuild forms and triggers.\n\n' +
       'This cannot be undone. Continue?',
     ui.ButtonSet.YES_NO
   );
   if (result !== ui.Button.YES) return;
 
+  deleteAllForms();
   clearAttendanceHistory();
   clearSectionRoster();
 
@@ -89,8 +93,15 @@ function systemReset() {
   clearYellowSheetNotesFromSections();
   logSystemEvent('Maintenance', 'systemReset', 'INFO', '', 'System Reset completed.');
   ui.alert(
-    'System Reset',
-    'Attendance history, member names, queue logs, and Yellow Sheet notes were cleared.\n\nRun Roster & Forms › Sync Roster from Database to repopulate section tabs.',
+    'System Reset Complete',
+    'Cleared:\n' +
+      '  • Google Forms (moved to Drive trash)\n' +
+      '  • Form submit triggers\n' +
+      '  • Member names and attendance history\n' +
+      '  • Queue logs and Yellow Sheet notes\n\n' +
+      'Next steps:\n' +
+      '  1. Run Admin › Initialize System to rebuild forms and triggers.\n' +
+      '  2. Run Roster & Forms › Sync Roster from Database.',
     ui.ButtonSet.OK
   );
 }

@@ -89,13 +89,27 @@ describe('RosterSyncLogic', () => {
     );
   });
 
-  test('buildCombinedMemberNote returns only non-empty part when one side is blank', () => {
+  test('buildCombinedMemberNote handles blank sides correctly', () => {
     const logic = loadRosterSyncLogic();
 
-    expect(logic.buildCombinedMemberNote('', 'Email: john@example.com')).toBe('Email: john@example.com');
+    // Contact-only: separator is always written so splitNote can recover it later
+    expect(logic.buildCombinedMemberNote('', 'Email: john@example.com')).toBe(
+      `${SEPARATOR}\nEmail: john@example.com`
+    );
     expect(logic.buildCombinedMemberNote('Class conflict: Mon 2:00 PM-3:00 PM', '')).toBe(
       'Class conflict: Mon 2:00 PM-3:00 PM'
     );
     expect(logic.buildCombinedMemberNote('', '')).toBe('');
+  });
+
+  test('splitNoteAtRosterSeparator recovers contact info when separator is at start', () => {
+    const logic = loadRosterSyncLogic();
+
+    // Format written by buildCombinedMemberNote when only contact info exists
+    const contactOnly = `${SEPARATOR}\nEmail: john@example.com`;
+    expect(logic.splitNoteAtRosterSeparator(contactOnly)).toEqual({
+      yellowSheetPart: '',
+      contactPart: 'Email: john@example.com',
+    });
   });
 });
