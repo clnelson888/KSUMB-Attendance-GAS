@@ -50,7 +50,8 @@ This is not a web app or a standalone application. The spreadsheet is the operat
 
 These steps apply when setting up the system for the first time, or after a System Reset.
 
-**Before you begin:** the spreadsheet itself (with all tabs pre-created) should already exist in Google Drive. The script must be bound to that spreadsheet.
+**Before you begin:** Create a copy of the sheet using the link below. The script must be bound to the copy you create.
+#### (KSUMB Attendance - Template Sheet)[https://docs.google.com/spreadsheets/d/1xf6SFTbT07B-jT9GmIpB4Mx9aloD3HCNa7FunTqQuUQ/edit?usp=sharing]
 
 **Steps:**
 
