@@ -4,6 +4,12 @@ A Google Apps Script system that automates attendance tracking for the Kansas St
 
 ---
 
+## Project Planning Documents
+
+The [`Project Planning Documents`](https://github.com/clnelson888/KSUMB-Attendance-GAS/tree/main/Project%20Planning%20Documents) folder in this repository contains the capstone project planning materials — requirements, design documents, and related deliverables. If you're a band staff member looking for background on how the system was designed and planned, start there.
+
+---
+
 ## Table of Contents
 
 **Usage**
@@ -339,6 +345,7 @@ KSUMB-Attendance-GAS/
 ├─ tests/                      Jest unit tests
 │   └─ helpers/gasHarness.js   Lightweight GAS mock for Node.js testing
 ├─ scripts/build.js            Build script (file copy src → dist)
+├─ Project Planning Documents/ Capstone project planning materials
 ├─ .claude/MD/                 AI context documents
 │   ├─ CURRENT STATE.md        Canonical architecture reference (start here)
 │   └─ AGENT - GAS Project Development Process.md  GAS coding rules and process
