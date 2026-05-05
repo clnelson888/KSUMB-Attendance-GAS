@@ -9,8 +9,8 @@ This is a Google Apps Script (GAS) starter template for building Google Workspac
 ## Commands
 
 ```bash
+npm run deploy     # Build + push to Google Apps Script via clasp. *Use this
 npm run build      # Copy src/ files to dist/ (no transpilation)
-npm run deploy     # Build + push to Google Apps Script via clasp
 npm run lint       # Run ESLint on src/
 npm run format     # Run Prettier on src/
 npm run test       # Run Jest unit tests
@@ -47,7 +47,9 @@ Prettier config (in `package.json`): single quotes, 120-char line width, 2-space
 When writing or reviewing GAS code, consult the following in priority order:
 
 ### Type Definitions (local — use first)
+
 The installed `@types/google-apps-script` package provides authoritative type definitions for every GAS service. Key files in `node_modules/@types/google-apps-script/`:
+
 - `google-apps-script.spreadsheet.d.ts` — SpreadsheetApp, Sheet, Range, etc.
 - `google-apps-script.forms.d.ts` — FormApp, Form, Item types
 - `google-apps-script.drive.d.ts` — DriveApp, File, Folder
@@ -58,18 +60,22 @@ The installed `@types/google-apps-script` package provides authoritative type de
 - `apis/sheets_v4.d.ts` — Advanced Sheets Service (used as `Sheets` global)
 
 ### MCP Tools (available in this session)
+
 - **`mcp__google-apps-script__script_run`** — Execute a GAS function in a deployed project (useful for smoke-testing deployed code)
 - **`mcp__google-apps-script__update_script_content`** — Push file content directly to a GAS project without using clasp
 - **`mcp__google-apps-script__script_projects_get_content`** — Read current files in a deployed GAS project
 - **`mcp__google-apps-script__get_script_metrics`** / **`list_script_processes`** — Inspect execution history and errors
 
 ### Google Official Documentation (web search)
+
 When type definitions are insufficient, search or fetch from:
+
 - GAS reference: `developers.google.com/apps-script/reference`
 - Service-specific guides: `developers.google.com/apps-script/guides`
 - Workspace REST APIs (used via UrlFetchApp or Advanced Services): `developers.google.com/workspace`
 
 ### GAS-Specific Constraints to Remember
+
 - No `import`/`export` at runtime — all files share a single global scope
 - No `npm` packages at runtime — only GAS built-ins and Advanced Services
 - Execution time limit: 6 minutes per run (30 min for Workspace Business/Enterprise)

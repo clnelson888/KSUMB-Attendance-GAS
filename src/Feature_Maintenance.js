@@ -56,11 +56,34 @@ function clearAttendanceHistory() {
 }
 
 /**
- * Clears queue logs and section history for a new year while preserving the
- * Database and Data tabs.
+ * Full destructive reset: clears all attendance history, queue logs, Yellow
+ * Sheet notes, and member names from every section tab. Each section tab is
+ * left with the header row and a single placeholder name row so that
+ * per-cell data validation on column A is preserved.
+ *
+ * Prompts for confirmation before running — this cannot be undone.
  */
-function newYearSetup() {
+function systemReset() {
+  var ui = SpreadsheetApp.getUi();
+  var result = ui.alert(
+    '⚠️ System Reset — Are you sure?',
+    'This will permanently clear:\n' +
+      '  • All Google Forms (moved to Drive trash)\n' +
+      '  • All form submit triggers\n' +
+      '  • All member names from every section tab\n' +
+      '  • All rehearsal date columns from every section tab\n' +
+      '  • All queue logs (Pink Sheets, Yellow Sheets, Late Check-Ins)\n' +
+      '  • All Yellow Sheet notes from section name cells\n\n' +
+      'The Database tab is not affected.\n\n' +
+      'Run Initialize System afterward to rebuild forms and triggers.\n\n' +
+      'This cannot be undone. Continue?',
+    ui.ButtonSet.YES_NO
+  );
+  if (result !== ui.Button.YES) return;
+
+  deleteAllForms();
   clearAttendanceHistory();
+  clearSectionRoster();
 
   var queueSheets = ['Pink Sheets', 'Late Check-Ins', 'Yellow Sheets'];
   for (var i = 0; i < queueSheets.length; i++) {
@@ -68,11 +91,18 @@ function newYearSetup() {
   }
 
   clearYellowSheetNotesFromSections();
-  logSystemEvent('Maintenance', 'newYearSetup', 'INFO', '', 'Completed New Year Setup.');
-  SpreadsheetApp.getUi().alert(
-    'New Year Setup',
-    'Attendance history, queue logs, and Yellow Sheet notes were cleared.',
-    SpreadsheetApp.getUi().ButtonSet.OK
+  logSystemEvent('Maintenance', 'systemReset', 'INFO', '', 'System Reset completed.');
+  ui.alert(
+    'System Reset Complete',
+    'Cleared:\n' +
+      '  • Google Forms (moved to Drive trash)\n' +
+      '  • Form submit triggers\n' +
+      '  • Member names and attendance history\n' +
+      '  • Queue logs and Yellow Sheet notes\n\n' +
+      'Next steps:\n' +
+      '  1. Run Admin › Initialize System to rebuild forms and triggers.\n' +
+      '  2. Run Roster & Forms › Sync Roster from Database.',
+    ui.ButtonSet.OK
   );
 }
 
@@ -91,6 +121,36 @@ function clearManagedSheetData(sheetName) {
     .getRange(2, 1, lastRow - 1, lastCol)
     .clearContent()
     .clearNote();
+}
+
+/**
+ * Clears all member name rows from every section tab, then writes
+ * EXAMPLE_MEMBER_NAME into row 2. Extra rows (3+) are physically deleted to
+ * match the approach clearAttendanceHistory uses for extra date columns —
+ * keeping the sheet tidy while leaving the placeholder row so any data
+ * validation on column A survives until roster sync repopulates the tab.
+ */
+function clearSectionRoster() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sectionTabs = getConfiguredSectionTabs();
+
+  for (var i = 0; i < sectionTabs.length; i++) {
+    var sheet = ss.getSheetByName(sectionTabs[i]);
+    if (!sheet) continue;
+
+    var lastRow = sheet.getLastRow();
+
+    if (lastRow >= 2) {
+      sheet.getRange(2, 1).clearContent().clearNote();
+    }
+    sheet.getRange(2, 1).setValue(EXAMPLE_MEMBER_NAME);
+
+    // Delete rows beyond the placeholder — mirrors how clearAttendanceHistory
+    // deletes extra date columns rather than just clearing their content.
+    if (lastRow > 2) {
+      sheet.deleteRows(3, lastRow - 2);
+    }
+  }
 }
 
 /**

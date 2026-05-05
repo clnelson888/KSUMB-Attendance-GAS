@@ -49,7 +49,7 @@ Current admin actions are exposed through the `Attendance` menu in the sheet:
 - `Roster sync`
 - `Sync roster names to forms`
 - `Clear attendance history`
-- `New year setup`
+- `System Reset`
 - `Process approved requests`
 
 ### What staff still do manually in the sheet
@@ -165,19 +165,22 @@ Menu:
 
 - `Attendance -> Clear attendance history`
 
-### New Year Setup
+### System Reset
 
-Use when you want to reset the sheet for a new year or term.
+Use when you want to fully reset the sheet for a new year or term.
 
 Menu:
 
-- `Attendance -> New year setup`
+- `Attendance -> Admin -> System Reset`
 
-This currently:
+Prompts for confirmation before running. This:
 
-- clears attendance history
-- clears queue logs
+- clears all member names from every section tab (leaves a placeholder row to preserve data validation)
+- clears all rehearsal date columns from every section tab
+- clears all queue logs (Pink Sheets, Yellow Sheets, Late Check-Ins)
 - clears Yellow Sheet notes from section name cells
+
+The Database tab is not affected. Run Roster Sync after to repopulate section tabs.
 
 ## Manual Testing Guide
 

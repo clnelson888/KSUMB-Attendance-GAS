@@ -32,6 +32,8 @@ const CONFIG_KEYS = {
   TIMEZONE: 'TIMEZONE',
   REHEARSAL_START_TIME: 'REHEARSAL_START_TIME',
   LATE_THRESHOLD_MINUTES: 'LATE_THRESHOLD_MINUTES',
+  YELLOW_SHEET_THRESHOLD_MINUTES: 'YELLOW_SHEET_THRESHOLD_MINUTES',
+  YELLOW_SHEET_THRESHOLD_MODE: 'YELLOW_SHEET_THRESHOLD_MODE',
   STATUS_PENDING: 'STATUS_PENDING',
   STATUS_APPROVED: 'STATUS_APPROVED',
   STATUS_DENIED: 'STATUS_DENIED',
@@ -41,6 +43,7 @@ const CONFIG_KEYS = {
   ATTENDANCE_ABSENT: 'ATTENDANCE_ABSENT',
   ATTENDANCE_EXCUSED: 'ATTENDANCE_EXCUSED',
   LATE_REASONS: 'LATE_REASONS',
+  ROSTER_NOTE_COLUMNS: 'ROSTER_NOTE_COLUMNS',
 };
 
 const CONFIG_PROPERTY_PREFIX = 'CFG__';
@@ -64,6 +67,14 @@ const DATETIME_NOTE_FORMAT = 'M/d/yyyy h:mm a';
 const EXAMPLE_DATE_HEADER = '1/1 12:00 AM';
 
 /**
+ * Placeholder name written to row 2 of every section tab by systemReset so
+ * that per-cell data validation rules on column A survive the roster wipe.
+ * Roster sync overwrites this row when real members are synced in.
+ * @type {string}
+ */
+const EXAMPLE_MEMBER_NAME = 'Wildcat, Willie';
+
+/**
  * Default values written by initializeSystem() when a setting is missing.
  * @type {Object.<string, string|number>}
  */
@@ -71,7 +82,9 @@ const DEFAULT_CONFIG_VALUES = {};
 DEFAULT_CONFIG_VALUES[CONFIG_KEYS.SECTION_TABS] = DEFAULT_SECTION_TABS.join('\n');
 DEFAULT_CONFIG_VALUES[CONFIG_KEYS.TIMEZONE] = 'America/Chicago';
 DEFAULT_CONFIG_VALUES[CONFIG_KEYS.REHEARSAL_START_TIME] = '15:30';
-DEFAULT_CONFIG_VALUES[CONFIG_KEYS.LATE_THRESHOLD_MINUTES] = 15;
+DEFAULT_CONFIG_VALUES[CONFIG_KEYS.LATE_THRESHOLD_MINUTES] = 10;
+DEFAULT_CONFIG_VALUES[CONFIG_KEYS.YELLOW_SHEET_THRESHOLD_MINUTES] = 15;
+DEFAULT_CONFIG_VALUES[CONFIG_KEYS.YELLOW_SHEET_THRESHOLD_MODE] = 'after_class_end';
 DEFAULT_CONFIG_VALUES[CONFIG_KEYS.STATUS_PENDING] = 'Pending';
 DEFAULT_CONFIG_VALUES[CONFIG_KEYS.STATUS_APPROVED] = 'Approved';
 DEFAULT_CONFIG_VALUES[CONFIG_KEYS.STATUS_DENIED] = 'Denied';
@@ -87,6 +100,7 @@ DEFAULT_CONFIG_VALUES[CONFIG_KEYS.LATE_REASONS] = [
   'Personal emergency',
   'Other',
 ].join('\n');
+DEFAULT_CONFIG_VALUES[CONFIG_KEYS.ROSTER_NOTE_COLUMNS] = '';
 
 /**
  * Logical status names used internally.
@@ -305,6 +319,17 @@ function getConfiguredLateReasons() {
   var configured = parseConfigList(getConfigValue(CONFIG_KEYS.LATE_REASONS, ''));
   if (configured.length > 0) return configured;
   return parseConfigList(DEFAULT_CONFIG_VALUES[CONFIG_KEYS.LATE_REASONS]);
+}
+
+/**
+ * Returns the ordered list of Database column names whose values should be
+ * appended to each member's name-cell note during a roster sync. Empty list
+ * means no contact info is appended.
+ *
+ * @returns {string[]}
+ */
+function getConfiguredRosterNoteColumns() {
+  return parseConfigList(getConfigValue(CONFIG_KEYS.ROSTER_NOTE_COLUMNS, ''));
 }
 
 /**

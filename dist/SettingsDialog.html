@@ -79,7 +79,8 @@
       }
 
       input,
-      textarea {
+      textarea,
+      select {
         width: 100%;
         box-sizing: border-box;
         border: 1px solid var(--line);
@@ -95,21 +96,55 @@
         resize: vertical;
       }
 
-      details {
+      .form-links {
         margin-top: 14px;
+        padding: 12px 14px;
         border: 1px solid var(--line);
         border-radius: 12px;
         background: #fbf8f1;
       }
 
-      summary {
-        cursor: pointer;
-        padding: 12px 14px;
+      .form-links h2 {
+        margin: 0 0 10px;
+        font-size: 13px;
         font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
       }
 
-      details .content {
-        padding: 0 14px 14px;
+      .form-links dl {
+        margin: 0;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 5px 12px;
+        align-items: baseline;
+      }
+
+      .form-links dt {
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .form-links dd {
+        margin: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .form-links a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      .form-links a:hover {
+        text-decoration: underline;
+      }
+
+      .form-links .not-built {
+        color: var(--muted);
+        font-style: italic;
       }
 
       .status {
@@ -197,8 +232,24 @@
         </div>
 
         <div class="field">
-          <label for="LATE_THRESHOLD_MINUTES">Late Threshold Minutes</label>
+          <label for="LATE_THRESHOLD_MINUTES">Tardy Threshold (minutes)</label>
           <input id="LATE_THRESHOLD_MINUTES" type="number" min="0" step="1" value="<?= settingsModel.values.LATE_THRESHOLD_MINUTES ?>" />
+          <div class="hint">Minutes after rehearsal start before a member without a Yellow Sheet is marked Tardy.</div>
+        </div>
+
+        <div class="field">
+          <label for="YELLOW_SHEET_THRESHOLD_MINUTES">Yellow Sheet Tardy Threshold (minutes)</label>
+          <input id="YELLOW_SHEET_THRESHOLD_MINUTES" type="number" min="0" step="1" value="<?= settingsModel.values.YELLOW_SHEET_THRESHOLD_MINUTES ?>" />
+          <div class="hint">Grace period for members with an approved Yellow Sheet conflict on that day.</div>
+        </div>
+
+        <div class="field-wide">
+          <label for="YELLOW_SHEET_THRESHOLD_MODE">Yellow Sheet Threshold Reference</label>
+          <select id="YELLOW_SHEET_THRESHOLD_MODE">
+            <option value="after_class_end"<?= settingsModel.values.YELLOW_SHEET_THRESHOLD_MODE !== 'after_rehearsal_start' ? ' selected' : '' ?>>After class ends (class end time + threshold)</option>
+            <option value="after_rehearsal_start"<?= settingsModel.values.YELLOW_SHEET_THRESHOLD_MODE === 'after_rehearsal_start' ? ' selected' : '' ?>>After rehearsal starts (rehearsal start + threshold)</option>
+          </select>
+          <div class="hint">Whether the Yellow Sheet grace period is counted from the member's class end time or from rehearsal start.</div>
         </div>
 
         <div class="field-wide">
@@ -206,47 +257,43 @@
           <textarea id="LATE_REASONS"><?= settingsModel.values.LATE_REASONS ?></textarea>
           <div class="hint">One reason per line.</div>
         </div>
+
+        <div class="field-wide">
+          <label for="ROSTER_NOTE_COLUMNS">Roster Contact Info Columns</label>
+          <textarea id="ROSTER_NOTE_COLUMNS"><?= settingsModel.values.ROSTER_NOTE_COLUMNS ?></textarea>
+          <div class="hint">Database column names to append to each member's note during roster sync (one per line). Leave blank to show no contact info. Example: <code>Email</code>, <code>Phone Number</code></div>
+        </div>
       </div>
 
-      <details>
-        <summary>Advanced Labels</summary>
-        <div class="content">
-          <div class="grid">
-            <div class="field">
-              <label for="STATUS_PENDING">Pending Status</label>
-              <input id="STATUS_PENDING" type="text" value="<?= settingsModel.values.STATUS_PENDING ?>" />
-            </div>
-            <div class="field">
-              <label for="STATUS_APPROVED">Approved Status</label>
-              <input id="STATUS_APPROVED" type="text" value="<?= settingsModel.values.STATUS_APPROVED ?>" />
-            </div>
-            <div class="field">
-              <label for="STATUS_DENIED">Denied Status</label>
-              <input id="STATUS_DENIED" type="text" value="<?= settingsModel.values.STATUS_DENIED ?>" />
-            </div>
-            <div class="field">
-              <label for="STATUS_COMPLETE">Completed Status</label>
-              <input id="STATUS_COMPLETE" type="text" value="<?= settingsModel.values.STATUS_COMPLETE ?>" />
-            </div>
-            <div class="field">
-              <label for="ATTENDANCE_PRESENT">Present Label</label>
-              <input id="ATTENDANCE_PRESENT" type="text" value="<?= settingsModel.values.ATTENDANCE_PRESENT ?>" />
-            </div>
-            <div class="field">
-              <label for="ATTENDANCE_TARDY">Tardy Label</label>
-              <input id="ATTENDANCE_TARDY" type="text" value="<?= settingsModel.values.ATTENDANCE_TARDY ?>" />
-            </div>
-            <div class="field">
-              <label for="ATTENDANCE_ABSENT">Absent Label</label>
-              <input id="ATTENDANCE_ABSENT" type="text" value="<?= settingsModel.values.ATTENDANCE_ABSENT ?>" />
-            </div>
-            <div class="field">
-              <label for="ATTENDANCE_EXCUSED">Excused Label</label>
-              <input id="ATTENDANCE_EXCUSED" type="text" value="<?= settingsModel.values.ATTENDANCE_EXCUSED ?>" />
-            </div>
-          </div>
-        </div>
-      </details>
+      <div class="form-links">
+        <h2>Form Links</h2>
+        <dl>
+          <dt>Pink Sheet</dt>
+          <dd>
+            <? if (settingsModel.formUrls.PINK) { ?>
+            <a href="<?= settingsModel.formUrls.PINK ?>" target="_blank">Open form ↗</a>
+            <? } else { ?>
+            <span class="not-built">Not built yet — run Initialize System</span>
+            <? } ?>
+          </dd>
+          <dt>Late Check-In</dt>
+          <dd>
+            <? if (settingsModel.formUrls.LATE) { ?>
+            <a href="<?= settingsModel.formUrls.LATE ?>" target="_blank">Open form ↗</a>
+            <? } else { ?>
+            <span class="not-built">Not built yet — run Initialize System</span>
+            <? } ?>
+          </dd>
+          <dt>Yellow Sheet</dt>
+          <dd>
+            <? if (settingsModel.formUrls.YELLOW) { ?>
+            <a href="<?= settingsModel.formUrls.YELLOW ?>" target="_blank">Open form ↗</a>
+            <? } else { ?>
+            <span class="not-built">Not built yet — run Initialize System</span>
+            <? } ?>
+          </dd>
+        </dl>
+      </div>
 
       <div id="status" class="status"></div>
 
@@ -265,15 +312,10 @@
         'TIMEZONE',
         'REHEARSAL_START_TIME',
         'LATE_THRESHOLD_MINUTES',
+        'YELLOW_SHEET_THRESHOLD_MINUTES',
+        'YELLOW_SHEET_THRESHOLD_MODE',
         'LATE_REASONS',
-        'STATUS_PENDING',
-        'STATUS_APPROVED',
-        'STATUS_DENIED',
-        'STATUS_COMPLETE',
-        'ATTENDANCE_PRESENT',
-        'ATTENDANCE_TARDY',
-        'ATTENDANCE_ABSENT',
-        'ATTENDANCE_EXCUSED',
+        'ROSTER_NOTE_COLUMNS',
       ];
 
       var DEFAULTS = <?!= JSON.stringify(settingsModel.defaults) ?>;

@@ -86,9 +86,14 @@ function rebuildYellowSheetNameCellNote(ss, section, name) {
   var nameCell = findYellowStudentNameCell(ss, section, name);
   if (!nameCell) return;
 
+  // Capture the contact info block that roster sync may have written below the
+  // separator so we can re-attach it after rebuilding the Yellow Sheet portion.
+  var existingNoteParts = splitNoteAtRosterSeparator(nameCell.getNote());
+  var contactPart = existingNoteParts.contactPart;
+
   var yellowSheet = ss.getSheetByName('Yellow Sheets');
   if (!yellowSheet || yellowSheet.getLastRow() < 2) {
-    nameCell.setNote('');
+    nameCell.setNote(contactPart);
     return;
   }
 
@@ -128,8 +133,8 @@ function rebuildYellowSheetNameCellNote(ss, section, name) {
   }
 
   var pendingLabel = mostRecentPendingSubmittedAt ? _formatYellowTimestamp(mostRecentPendingSubmittedAt) : '';
-
-  nameCell.setNote(buildYellowSheetCombinedNote(approvedLines, hasPending, pendingLabel));
+  var yellowSheetNote = buildYellowSheetCombinedNote(approvedLines, hasPending, pendingLabel);
+  nameCell.setNote(buildCombinedMemberNote(yellowSheetNote, contactPart));
 }
 
 /**

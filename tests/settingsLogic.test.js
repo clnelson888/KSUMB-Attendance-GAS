@@ -25,20 +25,28 @@ describe('SettingsLogic', () => {
       TIMEZONE: ' America/Chicago ',
       REHEARSAL_START_TIME: '15:30',
       LATE_THRESHOLD_MINUTES: 15,
-      STATUS_PENDING: 'Pending',
-      STATUS_APPROVED: 'Approved',
-      STATUS_DENIED: 'Denied',
-      STATUS_COMPLETE: 'Completed',
-      ATTENDANCE_PRESENT: 'Present',
-      ATTENDANCE_TARDY: 'Tardy',
-      ATTENDANCE_ABSENT: 'Absent',
-      ATTENDANCE_EXCUSED: 'Excused',
     });
 
     expect(payload.SECTION_TABS).toBe('Trumpet\nTuba');
     expect(payload.LATE_REASONS).toBe('Class\nParking / traffic');
     expect(payload.TIMEZONE).toBe('America/Chicago');
     expect(payload.LATE_THRESHOLD_MINUTES).toBe('15');
+  });
+
+  test('omits keys absent from the raw payload so stored defaults are not overwritten', () => {
+    const logic = loadSettingsLogic();
+
+    const payload = logic.normalizeSettingsPayload({
+      SECTION_TABS: 'Trumpet',
+      TIMEZONE: 'America/Chicago',
+      REHEARSAL_START_TIME: '15:30',
+      LATE_THRESHOLD_MINUTES: 15,
+      LATE_REASONS: 'Class',
+      ROSTER_NOTE_COLUMNS: '',
+    });
+
+    expect(Object.prototype.hasOwnProperty.call(payload, 'STATUS_PENDING')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(payload, 'ATTENDANCE_PRESENT')).toBe(false);
   });
 
   test('rejects invalid settings payloads', () => {
@@ -50,14 +58,6 @@ describe('SettingsLogic', () => {
       REHEARSAL_START_TIME: '3:30 PM',
       LATE_THRESHOLD_MINUTES: 'fifteen',
       LATE_REASONS: '',
-      STATUS_PENDING: '',
-      STATUS_APPROVED: 'Approved',
-      STATUS_DENIED: 'Denied',
-      STATUS_COMPLETE: 'Completed',
-      ATTENDANCE_PRESENT: 'Present',
-      ATTENDANCE_TARDY: 'Tardy',
-      ATTENDANCE_ABSENT: 'Absent',
-      ATTENDANCE_EXCUSED: 'Excused',
     });
 
     expect(errors).toContain('At least one section is required.');
@@ -65,6 +65,5 @@ describe('SettingsLogic', () => {
     expect(errors).toContain('Rehearsal start time must use HH:MM 24-hour format.');
     expect(errors).toContain('Late threshold minutes must be a whole number.');
     expect(errors).toContain('At least one late reason is required.');
-    expect(errors).toContain('STATUS_PENDING cannot be blank.');
   });
 });

@@ -1,6 +1,8 @@
 /**
  * Normalizes raw settings values into the persisted string format used by
- * document properties.
+ * document properties. Only includes keys that are present in rawValues so
+ * that omitted fields (e.g. STATUS_* and ATTENDANCE_* labels removed from
+ * the UI) are never overwritten with blanks.
  *
  * @param {Object.<string, *>} rawValues
  * @returns {Object.<string, string>}
@@ -11,9 +13,10 @@ function normalizeSettingsPayload(rawValues) {
 
   for (var i = 0; i < keys.length; i++) {
     var key = keys[i];
+    if (!Object.prototype.hasOwnProperty.call(rawValues, key)) continue;
     var value = rawValues[key];
 
-    if (key === CONFIG_KEYS.SECTION_TABS || key === CONFIG_KEYS.LATE_REASONS) {
+    if (key === CONFIG_KEYS.SECTION_TABS || key === CONFIG_KEYS.LATE_REASONS || key === CONFIG_KEYS.ROSTER_NOTE_COLUMNS) {
       normalized[key] = parseConfigList(value).join('\n');
       continue;
     }
@@ -52,22 +55,6 @@ function validateSettingsPayload(values) {
 
   if (!parseConfigList(values[CONFIG_KEYS.LATE_REASONS]).length) {
     errors.push('At least one late reason is required.');
-  }
-
-  var requiredTextKeys = [
-    CONFIG_KEYS.STATUS_PENDING,
-    CONFIG_KEYS.STATUS_APPROVED,
-    CONFIG_KEYS.STATUS_DENIED,
-    CONFIG_KEYS.STATUS_COMPLETE,
-    CONFIG_KEYS.ATTENDANCE_PRESENT,
-    CONFIG_KEYS.ATTENDANCE_TARDY,
-    CONFIG_KEYS.ATTENDANCE_ABSENT,
-    CONFIG_KEYS.ATTENDANCE_EXCUSED,
-  ];
-  for (var i = 0; i < requiredTextKeys.length; i++) {
-    if (!String(values[requiredTextKeys[i]] || '').trim()) {
-      errors.push(requiredTextKeys[i] + ' cannot be blank.');
-    }
   }
 
   return errors;

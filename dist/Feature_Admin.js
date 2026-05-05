@@ -229,20 +229,19 @@ function logSystemEvent(feature, action, severity, referenceId, message) {
 }
 
 /**
- * Initializes the workbook support tabs, config rows, and queue validation.
- * Safe to re-run.
+ * One-button first-run setup. Seeds document property config, normalizes any
+ * legacy status values, and builds the three Google Forms with triggers if
+ * they have not been created yet.
+ *
+ * The spreadsheet tabs and headers are expected to already exist in the
+ * template — this function does not create or modify any sheets.
+ *
+ * Safe to re-run: config seeding is additive-only, form build is skipped
+ * when form IDs are already stored in Script Properties.
  */
 function initializeSystem() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var results = [];
-
-  for (var i = 0; i < getManagedSystemSheetNames().length; i++) {
-    var sheetName = getManagedSystemSheetNames()[i];
-    var ensured = ensureSheetExists(ss, sheetName);
-    var wroteHeaders = ensureHeaders(ensured.sheet, SYSTEM_SHEET_HEADERS[sheetName]);
-
-    results.push((ensured.created ? 'Created ' : 'Found ') + sheetName + (wroteHeaders ? ' and added headers' : ''));
-  }
 
   var importedLegacyConfig = importLegacyDataConfigToProperties(false);
   var configPropertiesAdded = ensureDefaultConfigProperties();
@@ -250,44 +249,41 @@ function initializeSystem() {
   var legacyStatusUpdates = normalizeLegacyStatusValues(ss);
   resetConfigCache();
 
-  var configuredSections = getConfiguredSectionTabs();
-  for (var k = 0; k < configuredSections.length; k++) {
-    var ensuredSection = ensureSheetExists(ss, configuredSections[k]);
-    var wroteSectionHeaders = ensureHeaders(ensuredSection.sheet, ['Name']);
-    if (ensuredSection.created || wroteSectionHeaders) {
-      results.push((ensuredSection.created ? 'Created ' : 'Updated ') + 'section tab ' + configuredSections[k]);
-    }
+  if (importedLegacyConfig > 0) {
+    results.push('Imported ' + importedLegacyConfig + ' setting(s) from the legacy Data tab.');
+  }
+  if (configPropertiesAdded > 0) {
+    results.push('Seeded ' + configPropertiesAdded + ' default setting(s) into document properties.');
+  }
+  if (legacyStatusUpdates > 0) {
+    results.push('Normalized ' + legacyStatusUpdates + ' legacy status value(s).');
+  }
+  if (importedLegacyConfig === 0 && configPropertiesAdded === 0 && legacyStatusUpdates === 0) {
+    results.push('Configuration is already up to date.');
+  }
+
+  var props = PropertiesService.getScriptProperties();
+  var hasForms = props.getProperty('PINK_FORM_ID') || props.getProperty('LATE_FORM_ID') || props.getProperty('YELLOW_FORM_ID');
+  if (!hasForms) {
+    ss.toast('Building forms…', 'Initialize System', -1);
+    buildAllForms();
+    results.push('Forms created and submission triggers installed.');
+  } else {
+    results.push('Forms are already set up. Use Roster & Forms › Build / Rebuild Forms to update them.');
+  }
+
+  var urls = getFormPublishedUrls();
+  if (urls.PINK) results.push('Pink Sheet URL:\n' + urls.PINK);
+  if (urls.LATE) results.push('Late Check-In URL:\n' + urls.LATE);
+  if (urls.YELLOW) results.push('Yellow Sheet URL:\n' + urls.YELLOW);
+  if (urls.PINK || urls.LATE || urls.YELLOW) {
+    ss.toast('Forms ready. Copy links from the Initialize System summary or open Settings to find them.', 'Initialize System', 20);
   }
 
   SpreadsheetApp.flush();
-  logSystemEvent(
-    'Admin',
-    'initializeSystem',
-    'INFO',
-    '',
-    'Initialized workbook support tabs. Imported ' +
-      importedLegacyConfig +
-      ' legacy setting(s), seeded ' +
-      configPropertiesAdded +
-      ' property default(s), and normalized ' +
-      legacyStatusUpdates +
-      ' legacy status value(s).'
-  );
+  logSystemEvent('Admin', 'initializeSystem', 'INFO', '', results.join(' | '));
 
-  SpreadsheetApp.getUi().alert(
-    'Initialize System',
-    results.join('\n') +
-      '\n\nImported ' +
-      importedLegacyConfig +
-      ' legacy setting(s) from the Data tab.' +
-      '\nSeeded ' +
-      configPropertiesAdded +
-      ' missing document property setting(s).' +
-      '\nNormalized ' +
-      legacyStatusUpdates +
-      ' legacy status value(s).',
-    SpreadsheetApp.getUi().ButtonSet.OK
-  );
+  SpreadsheetApp.getUi().alert('Initialize System', results.join('\n\n'), SpreadsheetApp.getUi().ButtonSet.OK);
 }
 
 /**
