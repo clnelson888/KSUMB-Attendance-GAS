@@ -4,7 +4,7 @@
  * enough that it never appears naturally in Yellow Sheet note text.
  * @type {string}
  */
-const ROSTER_NOTE_SEPARATOR = '--- Roster Info ---';
+const ROSTER_NOTE_SEPARATOR = '--- Contact Info ---';
 
 /**
  * Builds the roster contact info block for a member's name-cell note.

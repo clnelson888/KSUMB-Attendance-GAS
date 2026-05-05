@@ -30,7 +30,7 @@ All tables are named to match their respective tab names.
 
 | \*\*Phone Number\*\* | String | |
 
-| \*\*Active\*\* | Boolean | TRUE / FALSE |
+| \*\*Status\*\* | String | Active / Inactive |
 
 \### 1.2 Yellow Sheets
 
@@ -39,6 +39,14 @@ All tables are named to match their respective tab names.
 | Header | Data Type | Notes |
 
 | :--- | :--- | :--- |
+
+| \*\*Submission ID\*\* | String | |
+
+| \*\*Response ID\*\* | String | |
+
+| \*\*Submitted At\*\* | String | |
+
+| \*\*Last Updated At\*\* | String | Pending, Approved, Denied |
 
 | \*\*Full Name\*\* | String | Format: `\[Last, First]` |
 
@@ -52,9 +60,9 @@ All tables are named to match their respective tab names.
 
 | \*\*End Time\*\* | Time | e.g., 3:45:00 PM |
 
-| \*\*Status\*\* | String | Pending, Approved, Denied |
-
 | \*\*Notes\*\* | String | |
+
+| \*\*Status\*\* | String | Pending, Approved, Denied |
 
 \### 1.4 Pink Sheets
 
