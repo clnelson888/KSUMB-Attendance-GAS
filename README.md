@@ -50,8 +50,8 @@ This is not a web app or a standalone application. The spreadsheet is the operat
 
 These steps apply when setting up the system for the first time, or after a System Reset.
 
-**Before you begin:** Create a copy of the sheet using the link below. The script must be bound to the copy you create.
-#### (KSUMB Attendance - Template Sheet)[https://docs.google.com/spreadsheets/d/1xf6SFTbT07B-jT9GmIpB4Mx9aloD3HCNa7FunTqQuUQ/edit?usp=sharing]
+**Before you begin:** ___Create a copy of the sheet using the link below.___ The script must be bound to the copy you create.
+### [KSUMB Attendance - Template](https://docs.google.com/spreadsheets/d/1xf6SFTbT07B-jT9GmIpB4Mx9aloD3HCNa7FunTqQuUQ/edit?usp=sharing)
 
 **Steps:**
 
